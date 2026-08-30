@@ -11,11 +11,18 @@ class MyApp extends StatelessWidget {
       home: Scaffold(
         appBar: AppBar(title: const Text('Profil Mahasiswa')),
         body: const Center(
-          child: Column(mainAxisSize: MainAxisSize.min, children: [
-            Icon(Icons.school, size: 72),
-            SizedBox(height: 16),
-            Text('Fadhil Taufiqurrachman', style: TextStyle(fontSize: 24)),
-            Text('Pemrograman Mobile — Minggu 1'),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Icon(Icons.account_circle, size: 72),
+              SizedBox(height: 16),
+              Text('Fadhil Taufiqurrachman', style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold)), 
+              SizedBox(height: 8),
+              Text('NIM : 244107020090', style: TextStyle(fontSize: 14, decoration: TextDecoration.underline)),
+              SizedBox(height: 4),
+              Text('Email : fadhiltaufiqurrachman08@gmail.com', style: TextStyle(fontSize: 16, fontStyle: FontStyle.italic, color: Colors.grey)),
+              SizedBox(height: 16),
+              Text('Pemrograman Mobile – Minggu 1', style: TextStyle(fontSize: 16)),
           ]),
         ),
       ),

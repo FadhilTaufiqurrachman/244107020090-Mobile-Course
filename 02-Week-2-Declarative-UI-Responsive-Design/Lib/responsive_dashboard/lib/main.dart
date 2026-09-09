@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/cupertino.dart';
 
+const double kWideBreakpoint = 700;
+
 void main() => runApp(const AcademicApp());
 
 class AcademicApp extends StatefulWidget {
@@ -70,7 +72,7 @@ class AcademicOverviewPage extends StatelessWidget {
           Expanded( 
             child: LayoutBuilder(
               builder: (context, constraints) {
-                final columns = constraints.maxWidth >= 700 ? 2 : 1;
+                final columns = constraints.maxWidth >= kWideBreakpoint ? 2 : 1;
                 return GridView.count(
                   padding: const EdgeInsets.symmetric(horizontal: 16),
                   crossAxisCount: columns,
@@ -78,10 +80,10 @@ class AcademicOverviewPage extends StatelessWidget {
                   mainAxisSpacing: 16,
                   childAspectRatio: 2.6,
                   children: const [
-                    DashboardCard(title: 'Kelas', value: 'TI-3G'),
-                    DashboardCard(title: 'IPK Saat Ini', value: '3.93'),
-                    DashboardCard(title: 'Semester', value: '5'),
-                    DashboardCard(title: 'Mata Kuliah', value: 'Pemrograman Mobile'),
+                    InfoCard(title: 'Kelas', value: 'TI-3G'),
+                    InfoCard(title: 'IPK Saat Ini', value: '3.93'),
+                    InfoCard(title: 'Semester', value: '5'),
+                    InfoCard(title: 'Mata Kuliah', value: 'Pemrograman Mobile'),
                   ],
                 );
               },
@@ -93,7 +95,6 @@ class AcademicOverviewPage extends StatelessWidget {
   }
 }
 
-// Komponen Header Profil menggunakan Container, Row, Column, Expanded
 class ProfileHeader extends StatelessWidget {
   const ProfileHeader({super.key});
 
@@ -124,7 +125,12 @@ class ProfileHeader extends StatelessWidget {
                       ),
                 ),
                 const SizedBox(height: 4),
-                const Text('244107020090'),
+                Text(
+                  '244107020090',
+                  style: Theme.of(context).textTheme.bodyMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.onSurfaceVariant,
+                      ),
+                ),
               ],
             ),
           ),
@@ -134,8 +140,8 @@ class ProfileHeader extends StatelessWidget {
   }
 }
 
-class DashboardCard extends StatelessWidget {
-  const DashboardCard({required this.title, required this.value, super.key});
+class InfoCard extends StatelessWidget {
+  const InfoCard({required this.title, required this.value, super.key});
 
   final String title;
   final String value;
@@ -153,11 +159,14 @@ class DashboardCard extends StatelessWidget {
                 style: Theme.of(context).textTheme.titleMedium,
               ),
             ),
-            Text(
-              value, 
-              style: Theme.of(context).textTheme.titleLarge?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: Theme.of(context).colorScheme.primary,
+            Expanded(
+              child : Text(
+                value,
+                textAlign: TextAlign.right,
+                style: Theme.of(context).textTheme.titleLarge?.copyWith(
+                  fontWeight: FontWeight.bold,
+                  color: Theme.of(context).colorScheme.primary,
+                ),
               ),
             ),
           ],

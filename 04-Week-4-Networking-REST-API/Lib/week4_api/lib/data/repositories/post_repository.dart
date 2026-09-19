@@ -1,5 +1,8 @@
 import 'package:dio/dio.dart';
+<<<<<<< HEAD
 
+=======
+>>>>>>> f6f0488 (chore: initialize week 4 dio and model data fluttter project)
 import '../models/post.dart';
 
 class PostRepository {
@@ -9,6 +12,7 @@ class PostRepository {
   Future<List<Post>> fetchPosts() async {
     final response = await _dio.get<List>('/posts');
     final data = response.data ?? [];
+<<<<<<< HEAD
     return data.whereType<Map<String, dynamic>>().map(Post.fromJson).toList();
   }
 
@@ -21,3 +25,11 @@ class PostRepository {
     return data.whereType<Map<String, dynamic>>().map(Post.fromJson).toList();
   }
 }
+=======
+    return data
+        .whereType<Map<String, dynamic>>()
+        .map(Post.fromJson)
+        .toList();
+  }
+}
+>>>>>>> f6f0488 (chore: initialize week 4 dio and model data fluttter project)

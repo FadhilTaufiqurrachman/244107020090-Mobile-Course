@@ -1,55 +1,12 @@
 import 'package:flutter/material.dart';
-<<<<<<< HEAD
-import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
-// import 'pages/post_list_page.dart';
-import 'pages/paged_post_page.dart';
-import 'pages/post_detail_page.dart'; 
-import 'data/models/post.dart'; 
-
-void main() => runApp(const ProviderScope(child: MyApp()));
-
-// 1. Definisikan konfigurasi GoRouter di sini
-final GoRouter _router = GoRouter(
-  initialLocation: '/',
-  routes: [
-    GoRoute(
-      path: '/',
-      builder: (context, state) => const PagedPostPage(),
-    ),
-    GoRoute(
-      path: '/post/:id',
-      builder: (context, state) {
-        final post = state.extra as Post;
-        return PostDetailPage(post: post);
-      },
-    ),
-  ],
-);
-=======
 
 void main() {
   runApp(const MyApp());
 }
->>>>>>> f6f0488 (chore: initialize week 4 dio and model data fluttter project)
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
-<<<<<<< HEAD
-  @override
-  Widget build(BuildContext context) {
-    return MaterialApp.router(
-      routerConfig: _router,
-      title: 'Week 4 - REST API',
-      theme: ThemeData(
-        colorSchemeSeed: Colors.indigo,
-        useMaterial3: true,
-      ),
-    );
-  }
-}
-=======
   // This widget is the root of your application.
   @override
   Widget build(BuildContext context) {
@@ -163,4 +120,3 @@ class _MyHomePageState extends State<MyHomePage> {
     );
   }
 }
->>>>>>> f6f0488 (chore: initialize week 4 dio and model data fluttter project)

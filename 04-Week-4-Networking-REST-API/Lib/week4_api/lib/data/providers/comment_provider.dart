@@ -27,25 +27,3 @@ class CommentListNotifier extends AsyncNotifier<List<Comment>> {
 final commentListProvider = AsyncNotifierProvider<CommentListNotifier, List<Comment>>(
   CommentListNotifier.new,
 );
-
-// Fungsi pesan error ramah pengguna (Timeout, Connection, 404, 500)
-String friendlyErrorMessage(Object error) {
-  if (error is DioException) {
-    switch (error.type) {
-      case DioExceptionType.connectionTimeout:
-      case DioExceptionType.sendTimeout:
-      case DioExceptionType.receiveTimeout:
-        return 'Koneksi lambat (melebihi 10 detik). Silakan coba lagi.';
-      case DioExceptionType.connectionError:
-        return 'Tidak ada koneksi internet.';
-      case DioExceptionType.badResponse:
-        final code = error.response?.statusCode;
-        if (code == 404) return 'Komentar tidak ditemukan (404).';
-        if (code == 500) return 'Server bermasalah (500). Coba lagi nanti.';
-        return 'Terjadi kesalahan pada server ($code).';
-      default:
-        return 'Terjadi kesalahan jaringan.';
-    }
-  }
-  return 'Terjadi kesalahan tak terduga: $error';
-}

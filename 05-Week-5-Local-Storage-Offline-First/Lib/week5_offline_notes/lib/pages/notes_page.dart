@@ -1,7 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:go_router/go_router.dart'; 
 import '../data/providers/note_provider.dart';
-import 'settings_page.dart';
+import '../widgets/note_tile.dart';
 
 class NotesPage extends ConsumerWidget {
   const NotesPage({super.key});
@@ -25,7 +26,7 @@ class NotesPage extends ConsumerWidget {
                 onChanged: (val) {
                   ref
                       .read(forceOfflineProvider.notifier)
-                      .toggle(val); // <- Gunakan .toggle()
+                      .toggle(val); 
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
                       content: Text(
@@ -92,10 +93,8 @@ class NotesPage extends ConsumerWidget {
           ),
           IconButton(
             icon: const Icon(Icons.settings),
-            onPressed: () => Navigator.push(
-              context,
-              MaterialPageRoute(builder: (_) => const SettingsPage()),
-            ),
+            // Mengubah Navigator.push menjadi GoRouter context.push
+            onPressed: () => context.push('/settings'),
           ),
         ],
       ),
@@ -108,12 +107,12 @@ class NotesPage extends ConsumerWidget {
             itemCount: notes.length,
             itemBuilder: (context, index) {
               final note = notes[index];
-              return ListTile(
-                title: Text(note.title),
-                subtitle: Text(note.body),
-                trailing: note.dirty
-                    ? const Icon(Icons.cloud_off, color: Colors.red)
-                    : const Icon(Icons.cloud_done, color: Colors.green),
+              return NoteTile(
+                note: note,
+                onTap: () {
+                  // Navigasi ke halaman detail berdasarkan ID
+                  context.push('/note/${note.id}');
+                },
               );
             },
           );

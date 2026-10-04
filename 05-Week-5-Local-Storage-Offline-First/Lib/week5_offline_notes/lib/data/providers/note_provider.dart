@@ -55,3 +55,8 @@ class NoteListNotifier extends AsyncNotifier<List<Note>> {
     state = await AsyncValue.guard(() => repo.fetchNotes());
   }
 }
+
+final noteDetailProvider = FutureProvider.family<Note?, int>((ref, id) async {
+  final repo = NoteRepository(); 
+  return await repo.getNoteById(id);
+});

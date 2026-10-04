@@ -20,3 +20,29 @@ class DarkModeNotifier extends AsyncNotifier<bool> {
     });
   }
 }
+
+class SettingsPage extends ConsumerWidget {
+  const SettingsPage({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final isDarkMode = ref.watch(darkModeProvider).value ?? false;
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Pengaturan'),
+      ),
+      body: ListView(
+        children: [
+          SwitchListTile(
+            title: const Text('Dark Mode (SharedPreferences)'),
+            subtitle: const Text('Tes penyimpanan lokal key-value'),
+            value: isDarkMode,
+            onChanged: (value) {
+              ref.read(darkModeProvider.notifier).toggle();
+            },
+          ),
+        ],
+      ),
+    );
+  }
+}

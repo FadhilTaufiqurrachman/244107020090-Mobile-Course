@@ -36,10 +36,7 @@ dependencies:
   cupertino_icons: ^1.0.8
   dio: ^5.11.1
   flutter_riverpod: ^3.4.3
-<<<<<<< HEAD
-  go_router: ^18.0.1
-=======
->>>>>>> f6f0488 (chore: initialize week 4 dio and model data fluttter project)
+  go_router: ^18.0.2
 
 dev_dependencies:
   flutter_test:

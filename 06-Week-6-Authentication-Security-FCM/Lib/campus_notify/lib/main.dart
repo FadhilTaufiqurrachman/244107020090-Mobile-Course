@@ -1,14 +1,45 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
+import 'package:firebase_core/firebase_core.dart'; // Tambahkan ini
 
 import 'providers/auth_provider.dart';
 import 'pages/login_page.dart';
 import 'pages/home_page.dart';
 import 'pages/announcement_page.dart';
+import 'messaging/push_service.dart'; // Tambahkan ini
 
-void main() {
-  // ProviderScope wajib diletakkan di root aplikasi Riverpod
+void main() async {
+  // Wajib ditambahkan agar binding Flutter siap sebelum inisialisasi Firebase
+  WidgetsFlutterBinding.ensureInitialized();
+  
+  // Pastikan firebase_core diinisialisasi sebelum runApp
+  await Firebase.initializeApp();
+
+  // Meminta izin notifikasi ke pengguna
+  await requestNotificationPermission();
+  
+  // Setup local notifications
+  await initLocalNotifications();
+  
+  // Mengelola siklus hidup token
+  await initFcmToken(
+    onToken: (token) async {
+      // SIMULASI MENGIRIM KE BACKEND (Dio)
+      // Sesuai jobsheet: JANGAN PERNAH menampilkan token penuh.
+      // Kita potong 12 karakter pertama saja untuk bukti di console/debug.
+      final truncatedToken = token.length > 12 ? '${token.substring(0, 12)}...' : token;
+      
+      debugPrint('======================================');
+      debugPrint('FCM Token Berhasil Didapat/Diperbarui!');
+      debugPrint('Token terpotong: $truncatedToken');
+      debugPrint('======================================');
+      
+      // Jika punya backend sungguhan, kodenya seperti ini:
+      // await dio.post('/devices', data: {'fcm_token': token, 'platform': 'android'});
+    },
+  );
+
   runApp(const ProviderScope(child: CampusNotifyApp()));
 }
 

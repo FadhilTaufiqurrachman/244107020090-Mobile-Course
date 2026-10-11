@@ -10,33 +10,18 @@ import 'pages/announcement_page.dart';
 import 'messaging/push_service.dart'; // Tambahkan ini
 
 void main() async {
-  // Wajib ditambahkan agar binding Flutter siap sebelum inisialisasi Firebase
   WidgetsFlutterBinding.ensureInitialized();
-  
-  // Pastikan firebase_core diinisialisasi sebelum runApp
   await Firebase.initializeApp();
+  
+  // Daftarkan background handler SEBELUM request permission
+  registerBackgroundHandler(); 
 
-  // Meminta izin notifikasi ke pengguna
   await requestNotificationPermission();
-  
-  // Setup local notifications
   await initLocalNotifications();
-  
-  // Mengelola siklus hidup token
   await initFcmToken(
     onToken: (token) async {
-      // SIMULASI MENGIRIM KE BACKEND (Dio)
-      // Sesuai jobsheet: JANGAN PERNAH menampilkan token penuh.
-      // Kita potong 12 karakter pertama saja untuk bukti di console/debug.
       final truncatedToken = token.length > 12 ? '${token.substring(0, 12)}...' : token;
-      
-      debugPrint('======================================');
-      debugPrint('FCM Token Berhasil Didapat/Diperbarui!');
       debugPrint('Token terpotong: $truncatedToken');
-      debugPrint('======================================');
-      
-      // Jika punya backend sungguhan, kodenya seperti ini:
-      // await dio.post('/devices', data: {'fcm_token': token, 'platform': 'android'});
     },
   );
 
@@ -84,11 +69,37 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   );
 });
 
-class CampusNotifyApp extends ConsumerWidget {
+class CampusNotifyApp extends ConsumerStatefulWidget {
   const CampusNotifyApp({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CampusNotifyApp> createState() => _CampusNotifyAppState();
+}
+
+class _CampusNotifyAppState extends ConsumerState<CampusNotifyApp> {
+  @override
+  void initState() {
+    super.initState();
+    
+    // Inisialisasi listener setelah frame pertama selesai di-render
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final router = ref.read(goRouterProvider);
+      
+      // Fungsi untuk navigasi
+      void go(String route) {
+        if (route != '/') {
+          router.push(route);
+        }
+      }
+
+      // Aktifkan listener untuk Foreground, Background klik, dan Terminated klik
+      listenForeground(go);
+      handleTerminated(go);
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final router = ref.watch(goRouterProvider);
 
     return MaterialApp.router(

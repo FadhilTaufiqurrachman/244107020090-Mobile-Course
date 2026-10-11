@@ -1,62 +1,73 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import 'package:firebase_core/firebase_core.dart'; // Tambahkan ini
+import 'package:firebase_core/firebase_core.dart';
 
 import 'providers/auth_provider.dart';
 import 'pages/login_page.dart';
 import 'pages/home_page.dart';
 import 'pages/announcement_page.dart';
-import 'messaging/push_service.dart'; // Tambahkan ini
+import 'messaging/push_service.dart';
+
+// Menggunakan NotifierProvider (pengganti StateProvider di Riverpod terbaru)
+class MaskedTokenNotifier extends Notifier<String> {
+  @override
+  String build() => 'Memuat token...';
+
+  void setToken(String value) {
+    state = value;
+  }
+}
+
+final maskedFcmTokenProvider =
+    NotifierProvider<MaskedTokenNotifier, String>(MaskedTokenNotifier.new);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp();
-  
+
   // Daftarkan background handler SEBELUM request permission
-  registerBackgroundHandler(); 
+  registerBackgroundHandler();
 
   await requestNotificationPermission();
   await initLocalNotifications();
-  await initFcmToken(
-    onToken: (token) async {
-      final truncatedToken = token.length > 12 ? '${token.substring(0, 12)}...' : token;
-      debugPrint('Token terpotong: $truncatedToken');
-    },
-  );
 
   runApp(const ProviderScope(child: CampusNotifyApp()));
 }
 
-// Konfigurasi GoRouter sebagai Provider agar bisa membaca authState
 final goRouterProvider = Provider<GoRouter>((ref) {
-  // Watch auth state agar router update otomatis saat login/logout
-  final authState = ref.watch(authStateProvider);
+  final notifier = ValueNotifier<AsyncValue<bool>>(const AsyncLoading());
+  ref.onDispose(notifier.dispose);
+
+  ref.listen<AsyncValue<bool>>(
+    authStateProvider,
+    (_, next) => notifier.value = next,
+    fireImmediately: true,
+  );
 
   return GoRouter(
     initialLocation: '/',
+    refreshListenable: notifier,
     redirect: (context, state) {
-      // Ambil nilai status login (true/false). Jika masih loading, anggap false.
+      final authState = ref.read(authStateProvider);
+      if (authState.isLoading) return null;
+
       final loggedIn = authState.value ?? false;
-      
       final goingLogin = state.matchedLocation == '/login';
-      
-      // Proteksi route: belum login, paksa ke /login
+
       if (!loggedIn && !goingLogin) return '/login';
-      
-      // Sudah login tapi mencoba buka /login, kembalikan ke home
       if (loggedIn && goingLogin) return '/';
-      
+
       return null;
     },
     routes: [
       GoRoute(
-        path: '/login', 
-        builder: (context, state) => const LoginPage()
+        path: '/login',
+        builder: (context, state) => const LoginPage(),
       ),
       GoRoute(
-        path: '/', 
-        builder: (context, state) => const HomePage()
+        path: '/',
+        builder: (context, state) => const HomePage(),
       ),
       GoRoute(
         path: '/pengumuman/:id',
@@ -80,22 +91,41 @@ class _CampusNotifyAppState extends ConsumerState<CampusNotifyApp> {
   @override
   void initState() {
     super.initState();
-    
-    // Inisialisasi listener setelah frame pertama selesai di-render
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final router = ref.read(goRouterProvider);
-      
-      // Fungsi untuk navigasi
-      void go(String route) {
-        if (route != '/') {
-          router.push(route);
-        }
-      }
+    _initPushAndDeepLink();
+  }
 
-      // Aktifkan listener untuk Foreground, Background klik, dan Terminated klik
-      listenForeground(go);
-      handleTerminated(go);
-    });
+  Future<void> _initPushAndDeepLink() async {
+    await initFcmToken(
+      onToken: (token) async {
+        final truncated =
+            token.length > 12 ? '${token.substring(0, 12)}...' : token;
+        debugPrint('Sinkronisasi FCM Token (Masked): $truncated');
+        ref.read(maskedFcmTokenProvider.notifier).setToken(truncated);
+
+        try {
+          final dio = ref.read(apiClientProvider);
+          await dio.post(
+            '/devices',
+            data: {'fcm_token': token, 'platform': 'android'},
+          );
+        } catch (_) {
+          debugPrint('Mock POST /devices terkirim untuk token: $truncated');
+        }
+      },
+    );
+
+    await ref.read(authStateProvider.future);
+    if (!mounted) return;
+
+    final router = ref.read(goRouterProvider);
+    void go(String route) {
+      if (route.isNotEmpty && route != '/') {
+        router.push(route);
+      }
+    }
+
+    listenForeground(go);
+    await handleTerminated(go);
   }
 
   @override

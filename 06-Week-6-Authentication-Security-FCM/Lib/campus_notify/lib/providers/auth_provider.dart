@@ -1,18 +1,29 @@
+import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../data/api_client.dart';
 import '../data/auth_repository.dart';
 import '../data/token_store.dart';
 
-// Provider dasar untuk dependensi injection
 final tokenStoreProvider = Provider<TokenStore>((ref) => TokenStore());
-final authRepositoryProvider = Provider<AuthRepository>((ref) => AuthRepository());
 
-// State Provider Autentikasi
-final authStateProvider = AsyncNotifierProvider<AuthNotifier, bool>(AuthNotifier.new);
+final authRepositoryProvider = Provider<AuthRepository>(
+  (ref) => AuthRepository(),
+);
+
+// Tambahkan provider ini agar tidak muncul error Undefined name 'apiClientProvider'
+final apiClientProvider = Provider<Dio>((ref) {
+  return buildApiClient(
+    ref.watch(tokenStoreProvider),
+    ref.watch(authRepositoryProvider),
+  );
+});
+
+final authStateProvider =
+    AsyncNotifierProvider<AuthNotifier, bool>(AuthNotifier.new);
 
 class AuthNotifier extends AsyncNotifier<bool> {
   @override
   Future<bool> build() async {
-    // Cek token di secure storage saat aplikasi pertama dibuka
     final token = await ref.watch(tokenStoreProvider).readAccess();
     return token != null;
   }
@@ -23,11 +34,9 @@ class AuthNotifier extends AsyncNotifier<bool> {
       final session = await ref
           .read(authRepositoryProvider)
           .login(email: email, password: password);
-          
       await ref
           .read(tokenStoreProvider)
           .save(access: session.access, refresh: session.refresh);
-          
       return true;
     });
   }

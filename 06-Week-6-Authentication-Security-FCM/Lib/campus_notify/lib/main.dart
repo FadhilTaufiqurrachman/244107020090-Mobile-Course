@@ -3,13 +3,14 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
 
+import 'routes.dart';
 import 'providers/auth_provider.dart';
 import 'pages/login_page.dart';
 import 'pages/home_page.dart';
 import 'pages/announcement_page.dart';
 import 'messaging/push_service.dart';
 
-// Menggunakan NotifierProvider (pengganti StateProvider di Riverpod terbaru)
+// Provider untuk menyimpan token terpotong (12 karakter) agar tampil di UI Debug
 class MaskedTokenNotifier extends Notifier<String> {
   @override
   String build() => 'Memuat token...';
@@ -35,6 +36,7 @@ void main() async {
   runApp(const ProviderScope(child: CampusNotifyApp()));
 }
 
+// Konfigurasi GoRouter menggunakan konstanta dari lib/routes.dart
 final goRouterProvider = Provider<GoRouter>((ref) {
   final notifier = ValueNotifier<AsyncValue<bool>>(const AsyncLoading());
   ref.onDispose(notifier.dispose);
@@ -46,31 +48,35 @@ final goRouterProvider = Provider<GoRouter>((ref) {
   );
 
   return GoRouter(
-    initialLocation: '/',
+    initialLocation: AppRoutes.home,
     refreshListenable: notifier,
     redirect: (context, state) {
       final authState = ref.read(authStateProvider);
+      // Tunggu pembacaan secure storage selesai sebelum melakukan redirect
       if (authState.isLoading) return null;
 
       final loggedIn = authState.value ?? false;
-      final goingLogin = state.matchedLocation == '/login';
+      final goingLogin = state.matchedLocation == AppRoutes.login;
 
-      if (!loggedIn && !goingLogin) return '/login';
-      if (loggedIn && goingLogin) return '/';
+      // Proteksi route: belum login, paksa ke /login
+      if (!loggedIn && !goingLogin) return AppRoutes.login;
+
+      // Sudah login tapi mencoba buka /login, kembalikan ke home
+      if (loggedIn && goingLogin) return AppRoutes.home;
 
       return null;
     },
     routes: [
       GoRoute(
-        path: '/login',
+        path: AppRoutes.login,
         builder: (context, state) => const LoginPage(),
       ),
       GoRoute(
-        path: '/',
+        path: AppRoutes.home,
         builder: (context, state) => const HomePage(),
       ),
       GoRoute(
-        path: '/pengumuman/:id',
+        path: AppRoutes.announcement,
         builder: (context, state) {
           final id = state.pathParameters['id'] ?? 'unknown';
           return AnnouncementPage(id: id);
@@ -95,11 +101,12 @@ class _CampusNotifyAppState extends ConsumerState<CampusNotifyApp> {
   }
 
   Future<void> _initPushAndDeepLink() async {
+    // 1. Inisialisasi token FCM dan kirim ke backend POST /devices
     await initFcmToken(
       onToken: (token) async {
         final truncated =
             token.length > 12 ? '${token.substring(0, 12)}...' : token;
-        debugPrint('Sinkronisasi FCM Token (Masked): $truncated');
+        debugPrint('Token terpotong: $truncated');
         ref.read(maskedFcmTokenProvider.notifier).setToken(truncated);
 
         try {
@@ -114,16 +121,19 @@ class _CampusNotifyAppState extends ConsumerState<CampusNotifyApp> {
       },
     );
 
+    // 2. Pastikan authState selesai dimuat sebelum memproses deep link notifikasi
     await ref.read(authStateProvider.future);
     if (!mounted) return;
 
     final router = ref.read(goRouterProvider);
+
     void go(String route) {
-      if (route.isNotEmpty && route != '/') {
+      if (route.isNotEmpty && route != AppRoutes.home) {
         router.push(route);
       }
     }
 
+    // 3. Aktifkan listener untuk Foreground, Background klik, dan Terminated klik
     listenForeground(go);
     await handleTerminated(go);
   }

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../main.dart';
+import '../routes.dart';
 import '../messaging/push_service.dart';
 import '../providers/auth_provider.dart';
 
@@ -21,7 +22,7 @@ class HomePage extends ConsumerWidget {
             onPressed: () {
               ref.read(authStateProvider.notifier).logout();
             },
-          )
+          ),
         ],
       ),
       body: Center(
@@ -30,7 +31,11 @@ class HomePage extends ConsumerWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.notifications_active, size: 80, color: Colors.blue),
+              const Icon(
+                Icons.notifications_active,
+                size: 80,
+                color: Colors.blue,
+              ),
               const SizedBox(height: 16),
               const Text(
                 'Selamat Datang!',
@@ -58,7 +63,8 @@ class HomePage extends ConsumerWidget {
                 icon: const Icon(Icons.message),
                 label: const Text('Cek Pengumuman BEM (ID: 99)'),
                 onPressed: () {
-                  context.push('/pengumuman/99');
+                  // Menggunakan helper konstanta dari lib/routes.dart
+                  context.push(AppRoutes.announcementById('99'));
                 },
               ),
               const SizedBox(height: 8),
@@ -70,7 +76,9 @@ class HomePage extends ConsumerWidget {
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
-                        content: Text('Berhenti langganan topik pengumuman-kampus'),
+                        content: Text(
+                          'Berhenti langganan topik pengumuman-kampus',
+                        ),
                       ),
                     );
                   }

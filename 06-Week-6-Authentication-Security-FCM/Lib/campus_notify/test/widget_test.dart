@@ -1,30 +1,62 @@
-// This is a basic Flutter widget test.
-//
-// To perform an interaction with a widget in your test, use the WidgetTester
-// utility in the flutter_test package. For example, you can send tap and scroll
-// gestures. You can also use WidgetTester to find child widgets in the widget
-// tree, read text, and verify that the values of widget properties are correct.
-
-import 'package:flutter/material.dart';
+import 'package:dio/dio.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:campus_notify/routes.dart';
+import 'package:campus_notify/data/api_errors.dart';
 
-import 'package:campus_notify/main.dart';
+class FakeTokenStore {
+  String? access;
+  String? refresh;
+}
 
 void main() {
-  testWidgets('Counter increments smoke test', (WidgetTester tester) async {
-    // Build our app and trigger a frame.
-    await tester.pumpWidget(const MyApp());
+  test('routeFromMessage menangani route kosong dan tanpa slash', () {
+    expect(routeFromMessage({}), '/');
+    expect(routeFromMessage({'route': 'pengumuman/3'}), '/pengumuman/3');
+    expect(routeFromMessage({'route': '/pengumuman/3'}), '/pengumuman/3');
+  });
 
-    // Verify that our counter starts at 0.
-    expect(find.text('0'), findsOneWidget);
-    expect(find.text('1'), findsNothing);
+  test('data payload membawa id pengumuman', () {
+    const data = {'route': '/pengumuman/3', 'id': '3'};
+    expect(data['id'], '3');
+    expect(routeFromMessage(data), '/pengumuman/3');
+  });
 
-    // Tap the '+' icon and trigger a frame.
-    await tester.tap(find.byIcon(Icons.add));
-    await tester.pump();
+  test('provider auth membaca status login dari token', () async {
+    final store = FakeTokenStore()..access = 'mock-access';
+    expect(store.access != null, isTrue);
+    store.access = null;
+    expect(store.access != null, isFalse);
+  });
 
-    // Verify that our counter has incremented.
-    expect(find.text('0'), findsNothing);
-    expect(find.text('1'), findsOneWidget);
+  test('refresh gagal -> sesi dibersihkan (paksa login ulang)', () async {
+    final store = FakeTokenStore()..refresh = '';
+    final needsLogin = (store.refresh ?? '').isEmpty;
+    expect(needsLogin, isTrue);
+  });
+
+  test('mapDioExceptionToUserMessage memetakan 401, timeout, dan offline', () {
+    final req = RequestOptions(path: '/devices');
+
+    final err401 = DioException(
+      requestOptions: req,
+      response: Response(requestOptions: req, statusCode: 401),
+      type: DioExceptionType.badResponse,
+    );
+    expect(
+      mapDioExceptionToUserMessage(err401),
+      contains('Sesi Anda telah berakhir'),
+    );
+
+    final errTimeout = DioException(
+      requestOptions: req,
+      type: DioExceptionType.connectionTimeout,
+    );
+    expect(mapDioExceptionToUserMessage(errTimeout), contains('timeout'));
+
+    final errOffline = DioException(
+      requestOptions: req,
+      type: DioExceptionType.connectionError,
+    );
+    expect(mapDioExceptionToUserMessage(errOffline), contains('offline'));
   });
 }

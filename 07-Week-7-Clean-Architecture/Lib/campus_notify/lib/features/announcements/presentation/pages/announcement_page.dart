@@ -69,24 +69,55 @@ class AnnouncementPage extends ConsumerWidget {
               Card(
                 color: Colors.grey.shade100,
                 elevation: 0,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(8),
+                ),
                 child: Padding(
                   padding: const EdgeInsets.symmetric(
                     horizontal: 12,
-                    vertical: 8,
+                    vertical: 10,
                   ),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(
-                        'Oleh: ${announcement.author}',
-                        style: const TextStyle(fontWeight: FontWeight.w500),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.person_outline,
+                            size: 16,
+                            color: Colors.blueGrey,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              'Oleh: ${announcement.author}',
+                              style: const TextStyle(
+                                fontWeight: FontWeight.w600,
+                                fontSize: 13,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
-                      Text(
-                        formatDateIndo(announcement.createdAt),
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade700,
-                        ),
+                      const SizedBox(height: 6),
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.access_time,
+                            size: 16,
+                            color: Colors.blueGrey,
+                          ),
+                          const SizedBox(width: 6),
+                          Expanded(
+                            child: Text(
+                              formatDateIndo(announcement.createdAt),
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: Colors.grey.shade700,
+                              ),
+                            ),
+                          ),
+                        ],
                       ),
                     ],
                   ),

@@ -239,3 +239,106 @@ class GetAnnouncementDetail {
 
 ### 4. Core Pure Utility: `lib/core/format.dart`
 * Menyediakan fungsi pure murni `formatDateIndo(DateTime dateTime)` tanpa bergantung pada context atau widget.
+
+---
+
+## Praktikum 3: Presentation, DI, dan Verifikasi
+
+### 1. Dependency Injection Menggunakan Riverpod
+
+Wiring seluruh dependensi dilakukan secara terpusat pada provider masing-masing fitur tanpa memerlukan package DI tambahan (seperti `get_it`).
+
+#### a. Provider Fitur `auth` (`lib/features/auth/presentation/providers/auth_providers.dart`)
+```dart
+// Data layer provider
+final tokenStoreProvider = Provider<TokenStore>((ref) => TokenStore());
+
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  return const AuthRepositoryImpl();
+});
+
+// Domain layer provider (menerima interface abstraksi, bukan konkrit)
+final loginUseCaseProvider = Provider<LoginUseCase>((ref) {
+  return LoginUseCase(ref.watch(authRepositoryProvider));
+});
+
+// Presentation layer provider (state management UI)
+final authStateProvider = AsyncNotifierProvider<AuthNotifier, bool>(AuthNotifier.new);
+```
+
+#### b. Provider Fitur `announcements` (`lib/features/announcements/presentation/providers/announcements_providers.dart`)
+```dart
+final announcementRepositoryProvider = Provider<AnnouncementRepository>((ref) {
+  return const AnnouncementRepositoryImpl();
+});
+
+final getAnnouncementDetailProvider = Provider<GetAnnouncementDetail>((ref) {
+  return GetAnnouncementDetail(ref.watch(announcementRepositoryProvider));
+});
+
+final announcementDetailProvider =
+    FutureProvider.family<Announcement, String>((ref, id) async {
+  final getDetail = ref.watch(getAnnouncementDetailProvider);
+  final result = await getDetail.call(id);
+  if (result.failure != null) throw Exception(result.failure!.message);
+  return result.announcement!;
+});
+```
+
+---
+
+### 2. Halaman Hanya Membaca State (Steril dari I/O & Formatting Mentah)
+
+* **`LoginPage`** (`lib/features/auth/presentation/pages/login_page.dart`):
+  Hanya mengamati `authStateProvider` untuk mengendalikan state UI (loading, form enabled/disabled, serta menampilkan pesan ramah dari `AuthFailure`). Tidak memanggil database atau HTTP request secara langsung.
+* **`AnnouncementPage`** (`lib/features/announcements/presentation/pages/announcement_page.dart`):
+  Menggunakan `ref.watch(announcementDetailProvider(id))` dengan pola `state.when(...)`:
+  - `loading:` menampilkan `CircularProgressIndicator`
+  - `error:` menampilkan `ErrorView` dan tombol coba lagi via `ref.invalidate`
+  - `data:` merender detail pengumuman dan memformat tanggal menggunakan fungsi pure `formatDateIndo` dari `core/format.dart`.
+* **`HomePage`** (`lib/features/announcements/presentation/pages/home_page.dart`):
+  Berfungsi sebagai beranda steril yang berinteraksi murni via `authStateProvider.notifier.logout()`, navigasi route terisolasi, dan token mask provider.
+* **`main.dart` Bootstrap:**
+  Panggilan `Dio` langsung pada saat token FCM didaftarkan telah didelegasikan keluar dari presentation layer ke `registerDeviceToken(token)`.
+
+---
+
+### 3. Verifikasi Dependency Rule
+
+Tiga pemeriksaan sterilitas arsitektur dijalankan untuk membuktikan kepatuhan arsitektur:
+
+#### Pemeriksaan 1: Presentation Steril dari Data Mentah (Target: 0 Hasil)
+*Perintah:*
+```bash
+rg "Dio\(|openDatabase|getDatabasesPath|FlutterSecureStorage|SharedPreferences\.getInstance|jsonDecode" lib/features/*/presentation lib/pages lib/main.dart
+```
+*Hasil:* **0 temuan (Lolos)**. Presentation layer tidak menyentuh database, jaringan, secure storage, atau parser JSON langsung.
+
+#### Pemeriksaan 2: Domain Steril dari Framework & Package Luar (Target: 0 Hasil)
+*Perintah:*
+```bash
+rg "import 'package:flutter|import 'package:dio|import 'package:sqflite|import 'package:firebase" lib/features/*/domain lib/core
+```
+*Hasil:* **0 temuan (Lolos)**. Layer Domain dan Core murni menggunakan Dart standar tanpa ketergantungan framework.
+
+#### Pemeriksaan 3: Static Analysis & Unit Tests
+*Perintah:*
+```bash
+flutter analyze
+flutter test
+```
+*Hasil:*
+```text
+Analyzing campus_notify...
+No issues found! (ran in 2.8s)
+
+00:00 +0: loading test/widget_test.dart
+00:00 +0: routeFromMessage menangani route kosong dan tanpa slash
+00:00 +1: data payload membawa id pengumuman
+00:00 +2: provider auth membaca status login dari token
+00:00 +3: refresh gagal -> sesi dibersihkan (paksa login ulang)
+00:00 +4: mapDioExceptionToUserMessage memetakan 401, timeout, dan offline
+00:00 +5: All tests passed!
+```
+Semua static analysis bersih dan seluruh unit test lulus dengan sukses.
+

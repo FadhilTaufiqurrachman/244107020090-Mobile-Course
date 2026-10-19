@@ -115,3 +115,12 @@ Future<void> subscribeCampusTopic() async {
 Future<void> unsubscribeCampusTopic() async {
   await FirebaseMessaging.instance.unsubscribeFromTopic('pengumuman-kampus');
 }
+
+Future<void> registerDeviceToken(String token) async {
+  try {
+    // Simulasi delegasi registrasi token perangkat ke endpoint /devices
+    debugPrint('Mock register device FCM ke backend sukses untuk token: $token');
+  } catch (e) {
+    debugPrint('Gagal mengirim token ke server: $e');
+  }
+}

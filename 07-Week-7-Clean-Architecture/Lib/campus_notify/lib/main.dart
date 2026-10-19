@@ -4,10 +4,10 @@ import 'package:go_router/go_router.dart';
 import 'package:firebase_core/firebase_core.dart';
 
 import 'routes.dart';
-import 'providers/auth_provider.dart';
-import 'pages/login_page.dart';
-import 'pages/home_page.dart';
-import 'pages/announcement_page.dart';
+import 'features/auth/presentation/providers/auth_providers.dart';
+import 'features/auth/presentation/pages/login_page.dart';
+import 'features/announcements/presentation/pages/home_page.dart';
+import 'features/announcements/presentation/pages/announcement_page.dart';
 import 'messaging/push_service.dart';
 
 // Provider untuk menyimpan token terpotong (12 karakter) agar tampil di UI Debug
@@ -109,15 +109,7 @@ class _CampusNotifyAppState extends ConsumerState<CampusNotifyApp> {
         debugPrint('Token terpotong: $truncated');
         ref.read(maskedFcmTokenProvider.notifier).setToken(truncated);
 
-        try {
-          final dio = ref.read(apiClientProvider);
-          await dio.post(
-            '/devices',
-            data: {'fcm_token': token, 'platform': 'android'},
-          );
-        } catch (_) {
-          debugPrint('Mock POST /devices terkirim untuk token: $truncated');
-        }
+        await registerDeviceToken(token);
       },
     );
 

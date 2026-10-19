@@ -1,35 +1,4 @@
-class AuthSession {
-  const AuthSession({required this.access, required this.refresh});
-  final String access;
-  final String refresh;
-}
-
-class AuthRepository {
-  // GANTI titik ini dengan FirebaseAuth.instance.signInWithEmailAndPassword
-  // atau GoogleSignIn saat backend Firebase sudah siap.
-  Future<AuthSession> login(
-      {required String email, required String password}) async {
-    
-    // Simulasi loading 500ms
-    await Future.delayed(const Duration(milliseconds: 500));
-    
-    // Simulasi validasi sederhana
-    if (!email.contains('@') || password.length < 6) {
-      throw Exception('Email atau kata sandi tidak valid');
-    }
-
-    // Simulasi JWT: header.payload.signature (jangan parse manual di produksi,
-    // gunakan verifikasi server).
-    return AuthSession(
-      access: 'mock-access-for-$email',
-      refresh: 'mock-refresh-for-$email',
-    );
-  }
-
-  // Fungsi untuk memperbarui token (simulasi)
-  Future<String> refresh(String refreshToken) async {
-    await Future.delayed(const Duration(milliseconds: 300));
-    if (refreshToken.isEmpty) throw Exception('Refresh token hilang');
-    return 'mock-access-renewed-${DateTime.now().millisecondsSinceEpoch}';
-  }
-}
+// Re-export untuk backward-compatibility
+export '../features/auth/domain/entities/auth_session.dart';
+export '../features/auth/domain/repositories/auth_repository.dart';
+export '../features/auth/data/repositories/auth_repository_impl.dart';

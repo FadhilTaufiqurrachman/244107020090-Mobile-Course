@@ -482,4 +482,92 @@ final authStateProvider = AsyncNotifierProvider<AuthNotifier, bool>(AuthNotifier
 - [x] Entity bebas mapping (`toJson`/`fromJson` hanya ada di Model).
 - [x] Wiring DI terpusat di provider, widget tidak pernah melakukan `new Repository()`.
 
+---
+
+## 7. Refactoring, Testing, dan Error Umum
+
+### 1. Refactoring Challenge: Fitur `announcements` & Core Utilities
+* **Penerapan Arsitektur Bersih pada Fitur Kedua:**
+  Fitur `announcements` telah mengadopsi 3-layer architecture secara utuh:
+  - **Domain:** `Announcement` (entity), `AnnouncementRepository` (interface), dan `GetAnnouncementDetail` (use case).
+  - **Data:** `AnnouncementModel` (mapping `toJson`/`fromJson`/`toEntity`) dan `AnnouncementRepositoryImpl`.
+  - **Presentation:** `announcements_providers.dart` (DI) dan `announcement_page.dart` (UI steril).
+* **Ekstraksi Fungsi Murni ke `lib/core/format.dart`:**
+  - `formatDateIndo(DateTime)`: Memformat tanggal ke string lokal Indonesia tanpa widget context.
+  - `parseRouteFromMessage(Map<String, dynamic>)`: Mengekstrak rute navigasi dari payload FCM tanpa inisialisasi Firebase.
+* **Standardisasi Failure Domain:**
+  - Seluruh raw exception dikonversi menjadi `Failure` (`LocalFailure`, `NetworkFailure`, `AuthFailure`) sebelum disajikan ke UI.
+
+---
+
+### 2. Testing: Use Case dengan Repository Palsu (*Fake Repository*)
+
+Pengujian dilakukan pada layer domain secara murni tanpa koneksi database, jaringan Dio, atau Firebase.
+
+#### a. Pengujian `GetAnnouncementDetail` (`test/get_announcement_detail_test.dart`)
+```dart
+class FakeAnnouncementRepository implements AnnouncementRepository {
+  FakeAnnouncementRepository({this.announcement, this.fail = false});
+
+  final Announcement? announcement;
+  final bool fail;
+
+  @override
+  Future<({Announcement? announcement, Failure? failure})> getAnnouncementById(String id) async {
+    if (fail) {
+      return (announcement: null, failure: const LocalFailure('Simulasi error: Pengumuman tidak ditemukan'));
+    }
+    return (announcement: announcement, failure: null);
+  }
+}
+```
+
+#### b. Pengujian `LoginUseCase` (`test/login_usecase_test.dart`)
+Menggunakan `FakeAuthRepository` untuk memvalidasi:
+1. Skenario sukses: Mengembalikan `AuthSession` dan `failure == null`.
+2. Skenario gagal: Mengembalikan `AuthFailure` tanpa melempar runtime exception.
+
+#### c. Pengujian Pure Utilities (`test/core_format_test.dart`)
+Menguji fungsi formatting tanggal dan parser rute payload.
+
+#### d. Hasil Eksekusi `flutter test`
+```text
+00:00 +0: loading test/core_format_test.dart
+00:00 +0: Core Pure Format & Route Parser Tests formatDateIndo memformat DateTime menjadi format teks bahasa Indonesia
+00:00 +1: Core Pure Format & Route Parser Tests parseRouteFromMessage menangani route normal, route tanpa slash, dan route kosong
+00:00 +2: GetAnnouncementDetail Use Case Tests Mengembalikan detail pengumuman dari repository palsu saat sukses
+00:00 +3: GetAnnouncementDetail Use Case Tests Meneruskan Failure dengan aman tanpa melempar exception saat gagal
+00:00 +4: LoginUseCase Tests Berhasil login dan mengembalikan AuthSession tanpa failure
+00:00 +5: LoginUseCase Tests Mengembalikan AuthFailure tanpa melempar exception saat kredensial salah
+00:00 +6: routeFromMessage menangani route kosong dan tanpa slash
+00:00 +7: data payload membawa id pengumuman
+00:00 +8: provider auth membaca status login dari token
+00:00 +9: refresh gagal -> sesi dibersihkan (paksa login ulang)
+00:00 +10: mapDioExceptionToUserMessage memetakan 401, timeout, dan offline
+00:00 +11: All tests passed!
+```
+**Total 11 Unit Test Lulus 100%!**
+
+---
+
+### 3. Error Umum dan Solusinya
+
+| Gejala Masalah | Penyebab Umum | Solusi yang Diterapkan |
+| :--- | :--- | :--- |
+| **Import cycle / circular dependency** | Presentation diimpor oleh data/domain, atau fitur saling mengimpor presentation. | Menegakkan Dependency Rule: dependensi satu arah (`presentation -> domain <- data`). Navigasi antar fitur memakai GoRouter string path, bukan import widget langsung. |
+| **`The argument type 'Model' can't be assigned to 'Entity'`** | Repository Impl mengembalikan model langsung, padahal kontrak meminta entity. | Menggunakan method `.toEntity()` di repository implementation sebelum data dikembalikan ke domain/presentation. |
+| **Provider `ref.watch` di luar widget/provider** | Panggilan DI ditulis di dalam method helper biasa atau constructor kelas. | Menjaga seluruh wiring DI Riverpod di dalam provider top-level (`Provider`, `FutureProvider`, `NotifierProvider`). |
+| **Test butuh database / network sungguhan** | Use case diuji menggunakan `RepositoryImpl` konkret asli. | Mengimplementasikan `FakeRepository` yang mengimplementasikan interface kontrak domain murni untuk testing. |
+| **Refactor merusak fitur yang sudah jalan** | Tidak ada snapshot commit dan langsung memindahkan file secara drastis. | Membuat snapshot commit awal, mempertahankan re-export sementara untuk file lama, serta menjalankan uji unit regression test. |
+
+---
+
+### 4. Checklist Verifikasi Mandiri Akhir
+- [x] **Tiga grep sterilitas nol hasil:** Presentation bebas dari Dio/Database/SecureStorage/JSON parser; Domain bebas dari import Flutter/Dio/SQLite/Firebase.
+- [x] **Separation of Concerns:** Kontrak interface di domain, implementasi di data, mapping data hanya di model.
+- [x] **Dependency Injection:** Widget tidak menginstansiasi repository; seluruh dependensi disuntikkan melalui Riverpod.
+- [x] **Behavior Identik:** Fitur auth login, logout, debug FCM token, dan deep link pengumuman tetap berjalan persis seperti sebelum refactor.
+- [x] **Analisis Statis & Test:** `flutter analyze` bersih (0 issues) dan 11 unit test lulus hijau.
+
+
 

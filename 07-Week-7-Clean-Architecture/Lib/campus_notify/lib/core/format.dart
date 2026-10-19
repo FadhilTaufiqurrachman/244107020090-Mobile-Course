@@ -24,3 +24,11 @@ String formatDateIndo(DateTime dateTime) {
 
   return '$day $month $year, $hour:$minute WIB';
 }
+
+/// Fungsi murni untuk mem-parsing dan mengekstrak rute dari payload notifikasi
+/// tanpa ketergantungan pada Flutter widget tree atau plugin Firebase.
+String parseRouteFromMessage(Map<String, dynamic> data) {
+  final rawRoute = data['route']?.toString().trim() ?? '';
+  if (rawRoute.isEmpty) return '/';
+  return rawRoute.startsWith('/') ? rawRoute : '/$rawRoute';
+}

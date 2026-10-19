@@ -342,3 +342,144 @@ No issues found! (ran in 2.8s)
 ```
 Semua static analysis bersih dan seluruh unit test lulus dengan sukses.
 
+---
+
+## 6. AI Challenge: Reorganisasi Arsitektur Clean Architecture
+
+### 1. Prompt AI yang Diajukan
+```text
+Project Flutter saya: campus_notify (auth + FCM + daftar pengumuman).
+Kondisi kini: folder lib/{data, providers, pages, messaging},
+repository tercampur dengan implementasi, widget memanggil Dio langsung.
+Tugas:
+1. Usulkan struktur feature-first Clean Architecture
+   (presentation/domain/data) untuk fitur auth + announcements.
+2. Untuk tiap file lama, sebutkan tujuan barunya (pindah/pecah/hapus).
+3. Tandai bagian yang over-engineering bila diterapkan ke CRUD sederhana,
+   dan kapan use case benar-benar dibutuhkan vs repository langsung.
+4. Tunjukkan wiring DI dengan Riverpod (tanpa package DI tambahan).
+Jelaskan trade-off setiap keputusan.
+```
+
+---
+
+### 2. Output Usulan Solusi Arsitektur AI
+
+#### Struktur Feature-First yang Diusulkan
+```text
+lib/
+├── core/
+│   ├── failures.dart                           # Failure murni domain Dart
+│   └── format.dart                             # Pure utility murni formatting
+├── features/
+│   ├── auth/
+│   │   ├── domain/
+│   │   │   ├── entities/auth_session.dart      # Entity murni
+│   │   │   ├── repositories/auth_repository.dart # Interface abstrak
+│   │   │   └── usecases/login_usecase.dart     # Business use case
+│   │   ├── data/
+│   │   │   ├── datasources/token_store.dart    # Secure storage adapter
+│   │   │   ├── models/auth_session_model.dart  # Serializer JSON/Model
+│   │   │   └── repositories/auth_repository_impl.dart # Implementasi repository
+│   │   └── presentation/
+│   │       ├── providers/auth_providers.dart   # Riverpod DI & Notifier
+│   │       └── pages/login_page.dart           # UI login steril
+│   └── announcements/
+│       ├── domain/
+│       │   ├── entities/announcement.dart      # Entity murni
+│       │   ├── repositories/announcement_repository.dart # Interface
+│       │   └── usecases/get_announcement_detail.dart # Business use case
+│       ├── data/
+│       │   ├── models/announcement_model.dart  # Serializer model
+│       │   └── repositories/announcement_repository_impl.dart
+│       └── presentation/
+│           ├── providers/announcements_providers.dart # Riverpod DI
+│           ├── pages/home_page.dart            # Beranda UI steril
+│           └── pages/announcement_page.dart    # Detail pengumuman UI steril
+├── messaging/
+│   └── push_service.dart                       # Service FCM & Local Notification
+├── routes.dart                                 # GoRouter configuration
+└── main.dart                                   # App initialization
+```
+
+---
+
+### 3. Tabel Pemetaan File Lama ke Tujuan Baru
+
+| File Lama | Status Tindakan | Lokasi Baru | Alasan Arsitektural |
+| :--- | :--- | :--- | :--- |
+| `lib/data/auth_repository.dart` | **Dipecah** | `lib/features/auth/domain/entities/auth_session.dart`, `.../domain/repositories/auth_repository.dart`, `.../data/repositories/auth_repository_impl.dart` | Memisahkan kontrak abstrak (domain) dari implementasi konkret & memindahkan entitas dari data layer ke domain. |
+| `lib/data/token_store.dart` | **Pindah** | `lib/features/auth/data/datasources/token_store.dart` | Merupakan data source lokal fitur auth. |
+| `lib/data/api_client.dart` | **Refactor** | `lib/data/api_client.dart` | Disesuaikan agar bergantung pada interface `AuthRepository` domain, bukan implementasi konkret. |
+| `lib/data/api_errors.dart` | **Digantikan** | `lib/core/failures.dart` | Menggantikan pemetaan error mentah menjadi domain failure terstandarisasi. |
+| `lib/providers/auth_provider.dart` | **Dipecah** | `lib/features/auth/presentation/providers/auth_providers.dart` | Menggabungkan provider data, use case domain, dan UI state notifier dalam satu wiring yang rapi. |
+| `lib/pages/login_page.dart` | **Pindah** | `lib/features/auth/presentation/pages/login_page.dart` | Terisolasi di dalam presentation layer fitur auth. |
+| `lib/pages/home_page.dart` | **Pindah** | `lib/features/announcements/presentation/pages/home_page.dart` | Terisolasi di dalam presentation layer fitur pengumuman/beranda. |
+| `lib/pages/announcement_page.dart` | **Pindah & Refactor** | `lib/features/announcements/presentation/pages/announcement_page.dart` | Menghubungkan ke `announcementDetailProvider` dan memisahkan formatting tanggal ke pure utility. |
+| `lib/main.dart` | **Refactor** | `lib/main.dart` | Menghapus pemanggilan `dio.post('/devices')` langsung di presentation, mendelegasikannya ke service layer. |
+| `lib/messaging/push_service.dart` | **Tetap / Perkaya** | `lib/messaging/push_service.dart` | Mengelola FCM isolate & local notifications di layer infrastruktur. |
+
+---
+
+### 4. Analisis Over-Engineering vs Kapan Use Case Dibutuhkan
+
+#### Potensi Over-Engineering:
+* Pada operasi CRUD sederhana 1-baris (misal: `getAnnouncementById(id)` yang hanya meneruskan panggilan langsung ke `repository.getAnnouncementById(id)`):
+  * **Biaya:** Menambahkan 1 kelas baru, 1 file baru, dan 1 provider baru hanya untuk memanggil satu baris fungsi. Untuk tim kecil, ini dapat meningkatkan kompleksitas kode tanpa nilai fungsional tambahan.
+  * **Alternatif Ringkas:** UI Notifier/Provider langsung memanggil `ref.watch(announcementRepositoryProvider).getAnnouncementById(id)`.
+
+#### Kapan Use Case Benar-Benar Wajib / Dibutuhkan:
+1. **Koordinasi Multi-Repository:** Contoh operasi checkout/sync yang harus mengambil data lokal, memverifikasi ke backend, dan menulis ke storage.
+2. **Aturan Bisnis Murni (Domain Logic):** Validasi format input, enkripsi data sebelum kirim, filter data sensitif, deduplikasi pengumuman.
+3. **Pengujian Mandiri (Pure Unit Testing):** Saat operasi bisnis perlu diuji 100% tanpa mock framework Flutter atau plugin native.
+
+---
+
+### 5. Wiring Dependency Injection dengan Riverpod
+
+Tidak diperlukan service locator global seperti `GetIt`. Semua instansiasi dideklarasikan secara deklaratif melalui Riverpod:
+
+```dart
+// 1. Data Layer: Data source & Repository Implementation
+final tokenStoreProvider = Provider<TokenStore>((ref) => TokenStore());
+
+final authRepositoryProvider = Provider<AuthRepository>((ref) {
+  return const AuthRepositoryImpl();
+});
+
+// 2. Domain Layer: Use case bergantung pada abstraksi repository
+final loginUseCaseProvider = Provider<LoginUseCase>((ref) {
+  return LoginUseCase(ref.watch(authRepositoryProvider));
+});
+
+// 3. Presentation Layer: State Notifier UI
+final authStateProvider = AsyncNotifierProvider<AuthNotifier, bool>(AuthNotifier.new);
+```
+
+**Keuntungan Dibandingkan GetIt:**
+* Siklus hidup terikat pada widget lifecycle & auto-dispose otomatis.
+* Tidak ada bahaya runtime error akibat singleton belum terdaftar (`unregistered instance`).
+* Mudah di-override saat unit testing atau widget testing menggunakan `ProviderScope(overrides: [...])`.
+
+---
+
+### 6. Tabel Usulan AI vs Keputusan Final Mahasiswa
+
+| Aspek Arsitektur | Usulan Awal AI | Keputusan Final Mahasiswa | Alasan & Justifikasi Teknis |
+| :--- | :--- | :--- | :--- |
+| **Lokasi Repository Interface** | Di dalam `domain/repositories/` | **Diterima** | Sesuai Dependency Inversion: domain menentukan kontrak, data mengimplementasikannya. |
+| **Pemakaian Use Case di Announcements** | Membuat `GetAnnouncementDetail` use case | **Diterima dengan Catatan** | Dipertahankan untuk memenuhi standar codelab, namun dicatat sebagai trade-off over-engineering untuk CRUD sederhana. |
+| **Penanganan Error** | Menggunakan Dart Records `({T? data, Failure? failure})` | **Diterima** | Menggunakan fitur bawaan Dart 3 murni tanpa dependensi eksternal seperti `fpdart`. |
+| **Penyimpanan Token** | `TokenStore` di `data/datasources/` | **Diterima** | Memisahkan adapter storage dari logika repository auth. |
+| **Re-export untuk Kompatibilitas** | Memindahkan file dan membiarkan file lama dihapus | **Modifikasi: Tetap Menyediakan Re-export** | Menjaga backward compatibility sehingga route/test eksisting tidak rusak mendadak saat refactor bertahap. |
+
+---
+
+### 7. AI Verification Checklist
+- [x] Interface repository tinggal di `domain` dan implementasi di `data`.
+- [x] `domain` bebas 100% dari import Flutter/Dio/SQLite/Firebase (dibuktikan via grep).
+- [x] Evaluasi over-engineering use case CRUD 1-baris tercatat secara tertulis.
+- [x] Entity bebas mapping (`toJson`/`fromJson` hanya ada di Model).
+- [x] Wiring DI terpusat di provider, widget tidak pernah melakukan `new Repository()`.
+
+

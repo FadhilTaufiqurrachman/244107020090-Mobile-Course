@@ -92,3 +92,49 @@ final filteredNotesProvider = Provider<List<Note>>((ref) {
    - *Query Kosong:* Seluruh daftar catatan muncul normal.
    - *Query Cocok:* Mengetik `"belanja"` atau `"BELI"` langsung menyaring catatan secara responsif.
    - *Query Tak Cocok:* Tampilan otomatis beralih ke widget *Empty State* dengan icon `Icons.search_off` dan pesan `"Tidak ada catatan dengan judul '...' "`.
+
+---
+
+## 4. Praktikum 3: Debug dan Refactor ke Clean Architecture
+
+### A. Alur Debugging dengan Test Merah (Red-Green Refactor)
+
+1. **Reproduksi Masalah:**
+   Input: Pengguna mencari `"BELANJA"` atau `"   "`.  
+   Hasil Tak Diharapkan: Catatan `"Belanja Sayur"` tidak muncul karena perbandingan case-sensitive, atau list menjadi kosong saat spasi diketik.
+2. **Isolasi Logika:**
+   Logika penyaringan diekstrak keluar dari presentation provider ke use case murni tersendiri:
+   📁 [`lib/data/services/search_notes.dart`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/05-Week-5-Local-Storage-Offline-First/Lib/week5_offline_notes/lib/data/services/search_notes.dart)
+3. **Test Merah (Failing Test):**
+   Dibuat unit test: `test('filter abaikan huruf besar/kecil')` yang gagal pada draf awal AI.
+4. **Perbaikan Kecil (Green Test):**
+   Implementasi `SearchNotesUseCase` yang membersihkan spasi (`.trim()`) dan menyamakan huruf kecil (`.toLowerCase()`).
+5. **Pencatatan Akar Masalah:**
+   AI sering berasumsi bahwa string perbandingan bahasa manusia cukup memakai `String.contains()` bawaan Dart tanpa mempertimbangkan perbedaan kapitalisasi keyboard pengguna mobile.
+
+---
+
+### B. Refactor ke Layer Arsitektur yang Benar
+
+Pemisahan tanggung jawab disusun bertingkat:
+
+```text
+widget (NotesPage: UI & TextField controller saja)
+  └── notifier (SearchQueryNotifier & filteredNotesProvider: reactive binding saja)
+        └── use case (SearchNotesUseCase: aturan bisnis filter & sanitasi query)
+              └── repository (NoteRepository: akses SQLite / persistent storage)
+```
+
+* **Hasil Audit Ukuran Kode:** Tidak ada method atau widget build yang melebihi 40 baris kode logis.
+* **Audit Sterilitas:** Widget sama sekali tidak memanggil SQLite atau SQL query secara langsung.
+
+---
+
+### C. Verifikasi Akhir Mesin
+
+1. **`flutter analyze`:**
+   * Status: ✅ **LULUS (No issues found!)** di seluruh workspace repository.
+2. **`dart format --set-exit-if-changed lib test`:**
+   * Status: ✅ **LULUS (15 files formatted, 0 issues remaining)**.
+3. **`flutter test`:**
+   * Status: ✅ **LULUS (7/7 tests passed!)**.

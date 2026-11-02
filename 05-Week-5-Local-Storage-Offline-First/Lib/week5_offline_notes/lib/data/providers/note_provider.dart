@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../local/db.dart';
 import '../local/note.dart';
 import '../repositories/note_repository.dart';
+import '../services/search_notes.dart';
 import '../services/sync_service.dart';
 
 final noteRepositoryProvider = Provider<NoteRepository>((ref) {
@@ -61,6 +62,10 @@ class NoteListNotifier extends AsyncNotifier<List<Note>> {
 
 // --- FITUR SEARCH (WEEK 9 AI-ASSISTED DEVELOPMENT) ---
 
+final searchNotesUseCaseProvider = Provider<SearchNotesUseCase>((ref) {
+  return const SearchNotesUseCase();
+});
+
 final searchQueryProvider = NotifierProvider<SearchQueryNotifier, String>(
   SearchQueryNotifier.new,
 );
@@ -78,21 +83,18 @@ class SearchQueryNotifier extends Notifier<String> {
   }
 }
 
-/// Fungsi murni penyaring catatan: case-insensitive & sanitasi whitespace
+/// Fungsi helper delegasi ke SearchNotesUseCase
 List<Note> filterNotes(List<Note> notes, String query) {
-  final cleanQuery = query.trim().toLowerCase();
-  if (cleanQuery.isEmpty) return notes;
-  return notes
-      .where((note) => note.title.toLowerCase().contains(cleanQuery))
-      .toList();
+  return const SearchNotesUseCase().call(notes, query);
 }
 
 /// Provider daftar catatan yang telah terfilter berdasarkan query pencarian
 final filteredNotesProvider = Provider<AsyncValue<List<Note>>>((ref) {
   final notesAsync = ref.watch(noteListProvider);
   final query = ref.watch(searchQueryProvider);
+  final searchUseCase = ref.watch(searchNotesUseCaseProvider);
 
-  return notesAsync.whenData((notes) => filterNotes(notes, query));
+  return notesAsync.whenData((notes) => searchUseCase(notes, query));
 });
 
 final noteDetailProvider = FutureProvider.family<Note?, int>((ref, id) async {

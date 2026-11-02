@@ -39,6 +39,15 @@ Setelah menyelesaikan praktikum ini, saya diharapkan mampu:
 
 ```text
 244107020090-Mobile-Course/
+├── 05-Week-5-Local-Storage-Offline-First/             # Target project peningkatan fitur pencarian
+│   └── Lib/
+│       └── week5_offline_notes/
+│           ├── lib/
+│           │   ├── data/
+│           │   │   ├── services/search_notes.dart     # Ekstraksi Use Case murni hasil refactoring
+│           │   │   └── providers/note_provider.dart   # Riverpod reactive state binding
+│           │   └── pages/notes_page.dart              # UI search bar & dynamic empty state
+│           └── test/widget_test.dart                  # Automated unit test search & validation
 └── 09-Week-9-AI-Assisted-Development/
     ├── README.md                                      # Laporan lengkap praktikum Minggu 9
     ├── docs/
@@ -60,6 +69,15 @@ Verifikasi kesiapan awal:
 ```bash
 flutter --version
 flutter analyze
+```
+
+### Menjalankan Pengujian Unit Fitur Search
+
+Dari direktori project `week5_offline_notes`:
+
+```bash
+cd "05-Week-5-Local-Storage-Offline-First/Lib/week5_offline_notes"
+flutter test
 ```
 
 ## 🏛️ Konsep Workflow AI dan Halusinasi
@@ -147,16 +165,35 @@ Fitur pencarian diimplementasikan pada `week5_offline_notes` dengan draf awal ya
    * *Solusi Terverifikasi:* Menggunakan `.trim().toLowerCase()` pada query dan `.toLowerCase()` pada field judul note.
 6. **Uji Manual:** Menghasilkan 3 status responsif: *Daftar Utuh (Query Kosong)* $\rightarrow$ *Daftar Tersaring (Query Cocok)* $\rightarrow$ *Empty State (Query Tak Cocok)*.
 
-### 3. Bukti Pengujian Unit Test
+---
+
+## ⚙️ Praktikum 3: Debug dan Refactor ke Clean Architecture
+
+### 1. Debugging dengan Test Merah (Red-Green Refactor)
+
+Alur penanganan bug logika AI dilakukan secara terukur:
+1. **Reproduksi:** Memasukkan query huruf besar (`"BELANJA"`) atau spasi (`"   "`).
+2. **Isolasi Logika:** Mengekstrak aturan filter dari presentation layer ke kelas Use Case terdedikasi: [`lib/data/services/search_notes.dart`](../05-Week-5-Local-Storage-Offline-First/Lib/week5_offline_notes/lib/data/services/search_notes.dart).
+3. **Test Merah:** Menuliskan `test('filter abaikan huruf besar/kecil')` yang gagal pada draf awal AI.
+4. **Perbaiki Kecil:** Memperbarui `SearchNotesUseCase` dengan sanitasi `.trim().toLowerCase()`.
+5. **Pencatatan Log:** Menyimpan akar masalah di `docs/ai-log.md`.
+
+### 2. Refactor ke Layer Arsitektur yang Benar
+
+Struktur tanggung jawab dipisahkan secara hierarkis:
 
 ```text
-00:00 +0: fromMap aman terhadap field yang hilang
-00:00 +1: flag dirty bertahan pada serialisasi
-00:00 +2: provider sukses dengan repository palsu
-00:00 +3: provider error dengan repository palsu
-00:00 +4: filter abaikan huruf besar/kecil
-00:00 +5: query tak cocok kembalikan kosong
-00:00 +6: query spasi saja mengembalikan semua catatan tanpa error
-00:00 +7: All tests passed!
+widget (NotesPage: UI & TextField controller saja)
+  └── notifier (SearchQueryNotifier & filteredNotesProvider: reactive binding saja)
+        └── use case (SearchNotesUseCase: aturan bisnis filter & sanitasi query)
+              └── repository (NoteRepository: akses SQLite / persistent storage)
 ```
-Seluruh 7 unit test pada `week5_offline_notes` **lulus 100%**.
+
+* **Ukuran Fungsi:** Seluruh fungsi berada di bawah 40 baris kode logis.
+* **Sterilitas UI:** Tidak ada pemanggilan SQLite langsung dari layer widget.
+
+### 3. Hasil Tiga Verifikasi Mesin
+
+* **`flutter analyze`:** ✅ **`No issues found!`** (0 warning, 0 error) di seluruh workspace.
+* **`dart format --set-exit-if-changed lib test`:** ✅ Seluruh 15 file Dart terformat rapi sesuai panduan resmi Dart.
+* **`flutter test`:** ✅ **7/7 unit tests passed!**

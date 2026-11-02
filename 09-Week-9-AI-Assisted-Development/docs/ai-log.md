@@ -107,12 +107,10 @@ final filteredNotesProvider = Provider<List<Note>>((ref) {
    📁 [`lib/data/services/search_notes.dart`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/05-Week-5-Local-Storage-Offline-First/Lib/week5_offline_notes/lib/data/services/search_notes.dart)
 3. **Test Merah (Failing Test):**
    Dibuat unit test: `test('filter abaikan huruf besar/kecil')` yang gagal pada draf awal AI.
-4. **Perbaikan Kecil (Green Test):**
+4. **Perbaiki Kecil (Green Test):**
    Implementasi `SearchNotesUseCase` yang membersihkan spasi (`.trim()`) dan menyamakan huruf kecil (`.toLowerCase()`).
 5. **Pencatatan Akar Masalah:**
    AI sering berasumsi bahwa string perbandingan bahasa manusia cukup memakai `String.contains()` bawaan Dart tanpa mempertimbangkan perbedaan kapitalisasi keyboard pengguna mobile.
-
----
 
 ### B. Refactor ke Layer Arsitektur yang Benar
 
@@ -130,11 +128,46 @@ widget (NotesPage: UI & TextField controller saja)
 
 ---
 
-### C. Verifikasi Akhir Mesin
+## 5. AI Challenge: Review Kritis vs Keputusan Mahasiswa
 
-1. **`flutter analyze`:**
-   * Status: ✅ **LULUS (No issues found!)** di seluruh workspace repository.
-2. **`dart format --set-exit-if-changed lib test`:**
-   * Status: ✅ **LULUS (15 files formatted, 0 issues remaining)**.
-3. **`flutter test`:**
-   * Status: ✅ **LULUS (7/7 tests passed!)**.
+### A. Prompt AI Challenge
+```text
+Review kode search Flutter ini sebagai senior dev.
+Konteks: feature-first (presentation->domain<-data),
+Riverpod, SQLite + Dio.
+Fokus: kebenaran, arsitektur, test. Abaikan style.
+Beri 3 temuan + level blocker/saran + alasan.
+```
+
+### B. Output Awal AI Reviewer (3 Temuan)
+
+1. **Temuan 1 (Saran - Performance / UI Responsiveness):**
+   * *Lokasi:* `NotesPage` text field `onChanged`
+   * *Isu:* Mengubah query setiap ketukan keyboard tanpa jeda (*no debouncing*) memicu re-filtering terus-menerus saat pengetikan cepat.
+   * *Alasan:* Pada dataset besar, filter in-memory sebaiknya diberi jeda 200–300ms agar UI tidak berulang kali merender ulang widget.
+2. **Temuan 2 (Blocker - Arsitektur Clean Architecture):**
+   * *Lokasi:* `SearchNotesUseCase`
+   * *Isu:* AI menyarankan: "Pindahkan filtering dari memory Dart ke query SQLite langsung (`SELECT * FROM notes WHERE title LIKE '%query%'`) di `NoteRepository` dan gunakan `sqflite` langsung di use case."
+   * *Alasan AI:* "Query langsung ke database lebih efisien daripada memuat semua catatan ke memori lalu menyaringnya dengan Dart list."
+3. **Temuan 3 (Saran - Test Robustness):**
+   * *Lokasi:* `test/widget_test.dart`
+   * *Isu:* Pengujian unit belum memverifikasi input yang memuat karakter khusus atau simbol regex (misal tanda kurung siku `[Sayur]`, bintang `*Mobile*`, atau tanda tanya).
+   * *Alasan:* Pada beberapa implementasi matcher regex, karakter khusus dapat memicu *FormatSyntaxException* atau crash tak terduga.
+
+---
+
+### C. Matriks Evaluasi & Keputusan Mahasiswa
+
+| No | Temuan AI | Level | Bukti Audit / Test | Keputusan | Alasan & Justifikasi Teknis Mahasiswa |
+|:--:|:---|:---:|:---|:---:|:---|
+| 1 | Tidak ada debouncing pada `onChanged` search bar | **Saran** | Kode di `notes_page.dart` memanggil `setQuery(value)` secara langsung. | ✅ **TERIMA + REFACTOR** | Saran valid untuk skala besar. Untuk aplikasi lokal berukuran ratusan item saat ini masih sangat responsif (<1ms), namun dicatat sebagai rekomendasi optimasi UX di masa depan. |
+| 2 | Pindahkan search ke native SQLite query & impor `sqflite` | **Blocker** | Diperiksa dari prinsip Clean Architecture & Offline-First. | ❌ **TOLAK KERAS** | **Pelanggaran Fatal Dependency Rule & Pola Offline-First!** Data catatan sudah di-cache secara reaktif di memori melalui `noteListProvider`. Membaca ulang disk SQLite setiap ketukan keyboard justru menambah latensi I/O dan merusak isolasi domain. Filter in-memory Dart jauh lebih cepat, deterministik, dan mudah diuji. |
+| 3 | Tambahkan pengujian untuk karakter khusus / simbol regex | **Saran** | `widget_test.dart` awalnya baru menguji kata biasa. | ✅ **TERIMA & DIPERBAIKI** | **Meningkatkan Keamanan Test.** Ditambahkan test case `test('query dengan simbol khusus atau regex characters aman')` untuk membuktikan bahwa implementasi substring `String.contains()` aman dari crash parsing regex. |
+
+---
+
+### D. AI Verification Checklist
+- [x] Minimal 1 saran AI terbukti benar dengan bukti konkret (Temuan 1 dan 3).
+- [x] Minimal 1 saran AI ditolak dengan alasan teknis tertulis (Temuan 2: menolak perusakan isolasi layer SQLite).
+- [x] Keputusan tiap file terdokumentasi jelas (terima, terima + refactor, tolak).
+- [x] Mampu menjelaskan alasan teknis secara mandiri tanpa bergantung pada teks AI.

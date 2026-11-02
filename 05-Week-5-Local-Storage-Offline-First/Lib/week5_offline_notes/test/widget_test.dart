@@ -92,7 +92,7 @@ void main() {
     expect(state.hasError, isTrue);
   });
 
-  // --- UNIT TESTS FITUR SEARCH (WEEK 9 PRAKTIKUM 2) ---
+  // --- UNIT TESTS FITUR SEARCH (WEEK 9 PRAKTIKUM 2 & AI CHALLENGE) ---
 
   // 6. Test Fitur Search: filter abaikan huruf besar/kecil (case-insensitive)
   test('filter abaikan huruf besar/kecil', () {
@@ -124,5 +124,16 @@ void main() {
     ];
 
     expect(filterNotes(list, '   '), hasLength(2));
+  });
+
+  // 9. Test Fitur Search: query dengan simbol khusus / regex tidak menyebabkan crash
+  test('query dengan simbol khusus atau regex characters aman', () {
+    final list = [
+      Note(title: 'Belanja [Sayur]', updatedAt: DateTime(2026, 10, 1)),
+      Note(title: 'Tugas *Mobile*', updatedAt: DateTime(2026, 10, 1)),
+    ];
+
+    expect(filterNotes(list, '[Sayur]'), hasLength(1));
+    expect(filterNotes(list, '*Mobile*'), hasLength(1));
   });
 }

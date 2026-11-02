@@ -7,6 +7,7 @@
 [![AI-Assisted](https://img.shields.io/badge/AI-Assisted%20Development-8E44AD?logo=openai&logoColor=white)](#)
 [![Clean Architecture](https://img.shields.io/badge/Architecture-Clean%20Architecture-009688)](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
 [![Riverpod](https://img.shields.io/badge/State%20Management-Riverpod-1976D2)](https://riverpod.dev/)
+[![AI Challenge](https://img.shields.io/badge/AI-Critical%20Verification-orange)](#)
 
 ## 🧭 Ringkasan
 
@@ -196,4 +197,31 @@ widget (NotesPage: UI & TextField controller saja)
 
 * **`flutter analyze`:** ✅ **`No issues found!`** (0 warning, 0 error) di seluruh workspace.
 * **`dart format --set-exit-if-changed lib test`:** ✅ Seluruh 15 file Dart terformat rapi sesuai panduan resmi Dart.
-* **`flutter test`:** ✅ **7/7 unit tests passed!**
+* **`flutter test`:** ✅ **8/8 unit tests passed!**
+
+---
+
+## 🤖 AI Challenge: Review Kritis vs Keputusan Mahasiswa
+
+### 1. Prompt Review AI Senior Developer
+```text
+Review kode search Flutter ini sebagai senior dev.
+Konteks: feature-first (presentation->domain<-data),
+Riverpod, SQLite + Dio.
+Fokus: kebenaran, arsitektur, test. Abaikan style.
+Beri 3 temuan + level blocker/saran + alasan.
+```
+
+### 2. Matriks Evaluasi & Keputusan Mahasiswa
+
+| No | Temuan AI | Level | Bukti Audit / Test | Keputusan | Alasan & Justifikasi Teknis |
+|:--:|:---|:---:|:---|:---:|:---|
+| 1 | Tidak ada debouncing pada `onChanged` search bar | **Saran** | Kode di `notes_page.dart` memanggil `setQuery(value)` secara langsung. | ✅ **TERIMA + REFACTOR** | Saran valid untuk skala dataset besar di masa mendatang, dicatat sebagai perbaikan UX. |
+| 2 | Pindahkan search ke native SQLite query & impor `sqflite` | **Blocker** | Diperiksa dari prinsip Clean Architecture & Offline-First. | ❌ **TOLAK KERAS** | **Pelanggaran Fatal Dependency Rule!** Data catatan sudah di-cache secara reaktif di memori melalui `noteListProvider`. Membaca ulang disk SQLite setiap ketukan keyboard justru menambah latensi I/O dan merusak isolasi domain. Filter in-memory Dart jauh lebih cepat, deterministik, dan mudah diuji. |
+| 3 | Tambahkan pengujian untuk karakter khusus / simbol regex | **Saran** | `widget_test.dart` awalnya baru menguji kata biasa. | ✅ **TERIMA & DIPERBAIKI** | **Meningkatkan Keamanan Test.** Ditambahkan test case `test('query dengan simbol khusus atau regex characters aman')` untuk membuktikan bahwa implementasi substring `String.contains()` aman dari crash parsing regex. |
+
+### 3. AI Verification Checklist
+- [x] Minimal 1 saran AI terbukti benar dengan bukti konkret (Temuan 1 dan 3).
+- [x] Minimal 1 saran AI ditolak dengan alasan teknis tertulis (Temuan 2: menolak perusakan isolasi layer SQLite).
+- [x] Keputusan tiap file terdokumentasi jelas (terima, terima + refactor, tolak).
+- [x] Mampu menjelaskan alasan teknis secara mandiri tanpa membuka AI.

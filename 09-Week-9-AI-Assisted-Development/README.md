@@ -14,6 +14,8 @@
 
 Minggu kesembilan membahas penerapan alur kerja **AI-Assisted Development** (atau yang populer dengan istilah *Vibe Coding*) secara bijak, terkendali, dan profesional. Fokus utama adalah memanfaatkan AI coding assistant untuk mempercepat penulisan fitur Flutter baru (fitur pencarian / *search feature*) pada basis kode yang sudah ada (`week5_offline_notes`), sembari menerapkan verifikasi ketat terhadap halusinasi AI, kepatuhan arsitektur, pengujian otomatis, dan *refactoring* ke standar Clean Architecture.
 
+Seluruh siklus pengembangan dikawal menggunakan 6 tahapan terstruktur (`prompt` $\rightarrow$ `generate` $\rightarrow$ `verify` $\rightarrow$ `test` $\rightarrow$ `refactor` $\rightarrow$ `explain`), membuktikan bahwa kolaborasi manusia dengan AI menghasilkan kode yang bersih, terdokumentasi, dan teruji secara komprehensif.
+
 ## 🎯 Tujuan Pembelajaran
 
 Setelah menyelesaikan praktikum ini, saya diharapkan mampu:
@@ -53,7 +55,7 @@ Setelah menyelesaikan praktikum ini, saya diharapkan mampu:
 │               ├── search_filter_test.dart            # Test suite terdedikasi (unit & widget tests)
 │               └── widget_test.dart                   # Automated regression tests
 └── 09-Week-9-AI-Assisted-Development/
-    ├── README.md                                      # Laporan lengkap praktikum Minggu 9
+    ├── README.md                                      # Laporan lengkap praktikum & refleksi Minggu 9
     ├── docs/
     │   └── ai-log.md                                  # Log prompt, hasil generasi AI, & verifikasi keputusan
     └── Screenshots/                                   # Bukti tangkapan layar eksekusi & pengujian
@@ -204,7 +206,7 @@ widget (NotesPage: UI & TextField controller saja)
 ### 3. Hasil Tiga Verifikasi Mesin
 
 * **`flutter analyze`:** ✅ **`No issues found!`** (0 warning, 0 error) di seluruh workspace.
-* **`dart format --set-exit-if-changed lib test`:** ✅ Seluruh file Dart terformat rapi sesuai panduan resmi Dart.
+* **`dart format --set-exit-if-changed lib test`:** ✅ Seluruh 16 file Dart terformat rapi sesuai panduan resmi Dart.
 * **`flutter test`:** ✅ **13/13 unit tests passed!**
 
 ---
@@ -264,10 +266,54 @@ Beri 3 temuan + level blocker/saran + alasan.
 | **Prompt diulang terus tanpa hasil** | Meminta AI memperbaiki kode tanpa data error reproduksi | Tuliskan langkah reproduksi yang jelas disertai test merah pembukti bug |
 | **Tak bisa menjelaskan kode hasil AI** | Menerima kode AI secara mentah tanpa membaca ulang baris demi baris | Baca ulang setiap baris, sederhanakan logika, dan lakukan uji manual |
 
-### 4. Checklist Verifikasi Mandiri
+---
 
-- [x] Prompt 5 slot + konteks arsitektur tercatat di `docs/ai-log.md`.
-- [x] `flutter analyze` bersih (0 warning/error di seluruh workspace).
-- [x] `flutter test` hijau (13/13 tests lolos di `week5_offline_notes`).
-- [x] 1 temuan AI dibuktikan benar (Temuan 3 regex special char) & 1 ditolak beralasan teknis (Temuan 2 SQLite query).
-- [x] Mampu menjelaskan setiap baris logika tanpa membuka catatan AI.
+## 📝 Refleksi Praktikum
+
+### 1. Satu halusinasi AI apa yang Anda temukan dan bagaimana membuktikannya?
+
+* **Halusinasi & Asumsi Keliru AI:** Pada kode filter draf awal, AI menghasilkan `return notes.where((n) => n.title.contains(query)).toList();`. AI berasumsi bahwa `String.contains()` sudah cukup untuk pencarian teks pengguna. Faktanya, method ini bersifat **case-sensitive** dan tidak membersihkan karakter spasi.
+* **Cara Membuktikannya:** Melalui pembuatan unit test `test('filter abaikan huruf besar/kecil')`. Saat input `'belanja'` diuji terhadap data `'Belanja Sayur'`, test **gagal (*red*)** karena perbedaan kapitalisasi ASCII. Selain itu, input whitespace `'   '` meloloskan filter dan mengembalikan list kosong secara salah. Pengujian otomatis memberikan bukti empiris bahwa asumsi AI keliru.
+
+### 2. Prompt mana yang paling membantu dan apa yang Anda ubah?
+
+* **Prompt yang Paling Membantu:** Prompt yang menggunakan **Formula 5 Slot** (Peran, Konteks, Tugas, Batasan, dan Output).
+* **Hal yang Diubah / Ditambahkan:** Bagian paling krusial yang ditambahkan adalah **Batasan Arsitektur (*Constraints*)**. Ketika batasan *"Patuhi The Dependency Rule, jangan panggil SQLite langsung dari UI, gunakan Riverpod Notifier, dan sertakan unit test"* disertakan, AI berhenti menghasilkan kode monolitik yang mencampur SQL query di dalam widget `build()`, dan mulai menyusun file service terpisah yang modular.
+
+### 3. Satu refactor apa yang Anda lakukan pada kode AI?
+
+* **Refactoring Konkret:** Mengekstrak fungsi filter pencarian dari file provider menjadi kelas use case terpisah: [`SearchNotesUseCase`](../05-Week-5-Local-Storage-Offline-First/Lib/week5_offline_notes/lib/data/services/search_notes.dart).
+* **Dampaknya:** Logika filter menjadi *pure Dart*, tidak bergantung pada widget Flutter maupun dependensi database, serta dapat diuji secara mandiri dengan test suite terdedikasi [`test/search_filter_test.dart`](../05-Week-5-Local-Storage-Offline-First/Lib/week5_offline_notes/test/search_filter_test.dart). Widget `NotesPage` pun tetap ramping dan fokus hanya pada rendering UI.
+
+### 4. Keputusan terima/tolak mana yang paling sulit?
+
+* **Keputusan yang Paling Sulit:** Menolak saran AI untuk memindahkan pencarian ke native query SQL SQLite (`SELECT * FROM notes WHERE title LIKE '%query%'`) di layer repository.
+* **Alasan Mengapa Sulit:** Secara tradisi pemrograman desktop/backend lama, melakukan pencarian via query SQL tampak seperti keputusan logis dan efisien. Namun dalam konteks **aplikasi mobile offline-first dengan reactive caching (Riverpod)**, data catatan sudah berada di memori (`noteListProvider`). Melakukan pembacaan disk I/O SQLite pada setiap ketukan keyboard pengguna justru menimbulkan *overhead* performa, berpotensi memicu race condition, dan mengotori domain use case dengan pustaka eksternal `sqflite`. Memahami trade-off performa in-memory vs disk I/O ini menjadi kunci utama penolakan saran AI tersebut.
+
+### 5. Apa pembelajaran utama dari praktikum ini?
+
+AI coding assistant adalah akselerator yang luar biasa untuk menulis boilerplate dan kerangka awal fitur, namun fenomena *Vibe Coding* (menerima kode AI tanpa verifikasi mendalam) adalah jebakan berbahaya bagi stabilitas perangkat lunak. Nilai sejati seorang software engineer terletak pada **kemampuan kurasi, audit arsitektur, dan ketelitian verifikasi test**. Kode yang baik bukan kode yang paling cepat digenerate oleh AI, melainkan kode yang terbukti steril, lulus uji otomatis mesin, dan dapat dipertanggungjawabkan oleh pengembangnya.
+
+## 💡 Kesimpulan
+
+Week 9 membuktikan keberhasilan penerapan AI-Assisted Development secara profesional:
+- **Penerapan Fitur Search:** Berhasil mengimplementasikan pencarian catatan *case-insensitive* lengkap dengan penanganan *empty state* responsif;
+- **Refactoring Bersih:** Memisahkan tanggung jawab kode ke dalam `SearchNotesUseCase`, Riverpod reactive provider, dan UI widget yang terisolasi;
+- **Jaminan Mutu Menyeluruh:** Seluruh 13 pengujian unit test dan widget test di `week5_offline_notes` lulus hijau 100%, serta `flutter analyze` 100% bersih tanpa warning;
+- **Dokumentasi Transparan:** Seluruh siklus prompt, draf awal AI, audit halusinasi, dan justifikasi keputusan teknis tercatat rapi di `docs/ai-log.md`.
+
+## 🔗 Referensi
+
+- [Slide Week 9: AI-Assisted Development / Vibe Coding](https://iti-polinema.github.io/flutter-codelab/09-minggu-9-ai-assisted-development-vibe-coding/)
+- [Flutter: Using IDEs and Static Analysis](https://docs.flutter.dev/tools/analysis)
+- [Dart: Linter Rules Documentation](https://dart.dev/tools/linter-rules)
+- [Riverpod: Getting Started & Providers](https://riverpod.dev/docs/introduction/getting_started)
+- [GitHub Copilot: Best Practices for Developers](https://docs.github.com/en/copilot)
+- [Learn Dart in Y Minutes](https://learnxinyminutes.com/docs/dart/)
+- [Dart Language Tour](https://dart.dev/guides/language/language-tour)
+
+---
+
+📌 **Repository:** [244107020090-Mobile-Course](https://github.com/FadhilTaufiqurrachman/244107020090-Mobile-Course)
+
+👨‍💻 **Mahasiswa:** Fadhil Taufiqurrachman · **NIM:** 244107020090

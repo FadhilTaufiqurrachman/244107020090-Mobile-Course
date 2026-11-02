@@ -8,10 +8,10 @@ class AuthSessionModel extends AuthSession {
   });
 
   Map<String, dynamic> toJson() => {
-        'access': access,
-        'refresh': refresh,
-        if (email != null) 'email': email,
-      };
+    'access': access,
+    'refresh': refresh,
+    if (email != null) 'email': email,
+  };
 
   factory AuthSessionModel.fromJson(Map<String, dynamic> json) {
     return AuthSessionModel(
@@ -21,9 +21,6 @@ class AuthSessionModel extends AuthSession {
     );
   }
 
-  AuthSession toEntity() => AuthSession(
-        access: access,
-        refresh: refresh,
-        email: email,
-      );
+  AuthSession toEntity() =>
+      AuthSession(access: access, refresh: refresh, email: email);
 }

@@ -7,6 +7,12 @@ class GetAnnouncementDetail {
   final AnnouncementRepository _repository;
 
   Future<({Announcement? announcement, Failure? failure})> call(String id) {
-    return _repository.getAnnouncementById(id);
+    if (id.trim().isEmpty) {
+      return Future.value((
+        announcement: null,
+        failure: const LocalFailure('ID pengumuman tidak boleh kosong'),
+      ));
+    }
+    return _repository.getAnnouncementById(id.trim());
   }
 }

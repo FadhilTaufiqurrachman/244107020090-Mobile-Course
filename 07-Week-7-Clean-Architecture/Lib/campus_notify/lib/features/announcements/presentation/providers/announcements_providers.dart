@@ -16,8 +16,10 @@ final getAnnouncementDetailProvider = Provider<GetAnnouncementDetail>((ref) {
 });
 
 // --- PRESENTATION LAYER FUTURE PROVIDER ---
-final announcementDetailProvider =
-    FutureProvider.family<Announcement, String>((ref, id) async {
+final announcementDetailProvider = FutureProvider.family<Announcement, String>((
+  ref,
+  id,
+) async {
   final getDetail = ref.watch(getAnnouncementDetailProvider);
   final result = await getDetail.call(id);
 

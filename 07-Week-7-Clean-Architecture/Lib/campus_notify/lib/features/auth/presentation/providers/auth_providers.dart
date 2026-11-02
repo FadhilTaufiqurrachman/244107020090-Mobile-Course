@@ -29,8 +29,9 @@ final loginUseCaseProvider = Provider<LoginUseCase>((ref) {
 });
 
 // --- PRESENTATION LAYER STATE NOTIFIER ---
-final authStateProvider =
-    AsyncNotifierProvider<AuthNotifier, bool>(AuthNotifier.new);
+final authStateProvider = AsyncNotifierProvider<AuthNotifier, bool>(
+  AuthNotifier.new,
+);
 
 class AuthNotifier extends AsyncNotifier<bool> {
   @override
@@ -50,7 +51,9 @@ class AuthNotifier extends AsyncNotifier<bool> {
     }
 
     if (result.session != null) {
-      await ref.read(tokenStoreProvider).save(
+      await ref
+          .read(tokenStoreProvider)
+          .save(
             access: result.session!.access,
             refresh: result.session!.refresh,
           );

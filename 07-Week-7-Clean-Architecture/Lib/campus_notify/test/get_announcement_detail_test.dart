@@ -18,7 +18,9 @@ class FakeAnnouncementRepository implements AnnouncementRepository {
     if (fail) {
       return (
         announcement: null,
-        failure: const LocalFailure('Simulasi error: Pengumuman tidak ditemukan'),
+        failure: const LocalFailure(
+          'Simulasi error: Pengumuman tidak ditemukan',
+        ),
       );
     }
     return (announcement: announcement, failure: null);
@@ -27,38 +29,56 @@ class FakeAnnouncementRepository implements AnnouncementRepository {
 
 void main() {
   group('GetAnnouncementDetail Use Case Tests', () {
-    test('Mengembalikan detail pengumuman dari repository palsu saat sukses',
-        () async {
-      final sample = Announcement(
-        id: '99',
-        title: 'Seminar Nasional AI',
-        content: 'Seminar diadakan di Gedung Serbaguna jam 09.00.',
-        author: 'BEM Kampus',
-        createdAt: DateTime(2026, 10, 19),
-      );
+    test(
+      'Mengembalikan detail pengumuman dari repository palsu saat sukses',
+      () async {
+        final sample = Announcement(
+          id: '99',
+          title: 'Seminar Nasional AI',
+          content: 'Seminar diadakan di Gedung Serbaguna jam 09.00.',
+          author: 'BEM Kampus',
+          createdAt: DateTime(2026, 10, 19),
+        );
 
-      final repo = FakeAnnouncementRepository(announcement: sample);
-      final useCase = GetAnnouncementDetail(repo);
+        final repo = FakeAnnouncementRepository(announcement: sample);
+        final useCase = GetAnnouncementDetail(repo);
 
-      final result = await useCase.call('99');
+        final result = await useCase.call('99');
 
-      expect(result.failure, isNull);
-      expect(result.announcement, isNotNull);
-      expect(result.announcement!.id, '99');
-      expect(result.announcement!.title, 'Seminar Nasional AI');
-      expect(result.announcement!.author, 'BEM Kampus');
-    });
+        expect(result.failure, isNull);
+        expect(result.announcement, isNotNull);
+        expect(result.announcement!.id, '99');
+        expect(result.announcement!.title, 'Seminar Nasional AI');
+        expect(result.announcement!.author, 'BEM Kampus');
+      },
+    );
 
-    test('Meneruskan Failure dengan aman tanpa melempar exception saat gagal',
-        () async {
-      final repo = FakeAnnouncementRepository(fail: true);
-      final useCase = GetAnnouncementDetail(repo);
+    test(
+      'Meneruskan Failure dengan aman tanpa melempar exception saat gagal',
+      () async {
+        final repo = FakeAnnouncementRepository(fail: true);
+        final useCase = GetAnnouncementDetail(repo);
 
-      final result = await useCase.call('non_existing_id');
+        final result = await useCase.call('non_existing_id');
 
-      expect(result.announcement, isNull);
-      expect(result.failure, isA<LocalFailure>());
-      expect(result.failure!.message, contains('Pengumuman tidak ditemukan'));
-    });
+        expect(result.announcement, isNull);
+        expect(result.failure, isA<LocalFailure>());
+        expect(result.failure!.message, contains('Pengumuman tidak ditemukan'));
+      },
+    );
+
+    test(
+      'Mengembalikan LocalFailure saat ID pengumuman kosong atau hanya spasi',
+      () async {
+        final repo = FakeAnnouncementRepository();
+        final useCase = GetAnnouncementDetail(repo);
+
+        final result = await useCase.call('   ');
+
+        expect(result.announcement, isNull);
+        expect(result.failure, isA<LocalFailure>());
+        expect(result.failure!.message, contains('tidak boleh kosong'));
+      },
+    );
   });
 }

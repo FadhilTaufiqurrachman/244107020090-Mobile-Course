@@ -13,7 +13,7 @@ String formatDateIndo(DateTime dateTime) {
     'September',
     'Oktober',
     'November',
-    'Desember'
+    'Desember',
   ];
 
   final day = dateTime.day.toString().padLeft(2, '0');

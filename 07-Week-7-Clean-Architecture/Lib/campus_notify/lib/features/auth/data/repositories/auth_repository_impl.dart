@@ -19,7 +19,9 @@ class AuthRepositoryImpl implements AuthRepository {
       if (!email.contains('@') || password.length < 6) {
         return (
           session: null,
-          failure: const AuthFailure('Email tidak valid atau kata sandi kurang dari 6 karakter'),
+          failure: const AuthFailure(
+            'Email tidak valid atau kata sandi kurang dari 6 karakter',
+          ),
         );
       }
 
@@ -47,7 +49,9 @@ class AuthRepositoryImpl implements AuthRepository {
       if (refreshToken.isEmpty) {
         return (
           refreshedToken: null,
-          failure: const AuthFailure('Refresh token tidak ditemukan atau kosong'),
+          failure: const AuthFailure(
+            'Refresh token tidak ditemukan atau kosong',
+          ),
         );
       }
 

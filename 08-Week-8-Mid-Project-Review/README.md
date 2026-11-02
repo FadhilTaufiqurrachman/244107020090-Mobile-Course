@@ -6,13 +6,14 @@
 [![Flutter](https://img.shields.io/badge/Flutter-Material%203-02569B?logo=flutter&logoColor=white)](https://flutter.dev/)
 [![Git Flow](https://img.shields.io/badge/Git-Git%20Flow-F05032?logo=git&logoColor=white)](https://git-scm.com/)
 [![Conventional Commits](https://img.shields.io/badge/Commits-Conventional%20Commits-FE5196?logo=conventionalcommits&logoColor=white)](https://www.conventionalcommits.org/)
+[![CI Workflow](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/features/actions)
 [![Code Review](https://img.shields.io/badge/Review-Peer%20Review-green)](#)
 
 ---
 
 ## 🧭 Ringkasan
 
-Minggu kedelapan difokuskan pada **Mid Project Review & Code Review**. Pada tahap tengah semester ini, fokus beralih ke kolaborasi profesional, disiplin Git (*Git Flow* dan *branch hygiene*), penulisan Pull Request yang terstruktur, *peer code review*, static analysis (`flutter analyze` & `dart format`), serta penilaian kesiapan project Flutter (khususnya project Minggu 3 hingga 7: `week5_offline_notes` dan `campus_notify` Clean Architecture).
+Minggu kedelapan difokuskan pada **Mid Project Review & Code Review**. Pada tahap tengah semester ini, fokus beralih ke kolaborasi profesional, disiplin Git (*Git Flow* dan *branch hygiene*), penulisan Pull Request yang terstruktur, *peer code review*, static analysis (`flutter analyze` & `dart format`), otomasi CI via GitHub Actions, serta penilaian kesiapan fondasi project Flutter paruh pertama semester (Minggu 1 hingga 7: `week5_offline_notes` dan `campus_notify` Clean Architecture).
 
 ---
 
@@ -33,11 +34,11 @@ Setelah menyelesaikan praktikum ini, mahasiswa mampu:
 
 ### 1. Audit Riwayat Repository
 Hasil eksekusi audit Git (`git log --oneline -15`, `git branch -a`, `git status`):
-* **Branching saat ini:** Seluruh riwayat commit (56 commit) berada langsung di branch `main`. Branch `develop` belum ada.
-* **Format Commit:** Sebagian besar commit sudah menggunakan prefix tipe (`feat:`, `docs:`, `chore:`, `fix:`), namun belum menyertakan `(scope)` dan masih berorientasi pada nomor minggu tugas kuliah (*course-centric*).
-* **Temuan Khusus:** Ditemukan commit dengan deskripsi ambigu (`fix: minor git bug`) serta typo penulisan delimiter (`fix; minor git bug`).
+* **Branching saat ini:** Branch `develop` telah dibuat dan didorong ke remote GitHub. Branch fitur `feat/mid-review-checklist` aktif digunakan.
+* **Format Commit:** Sebagian besar commit sudah menggunakan prefix tipe (`feat:`, `docs:`, `chore:`, `fix:`), dan mulai Week 8 diadopsi format lengkap Conventional Commits `tipe(scope): deskripsi`.
+* **Temuan Khusus:** Ditemukan commit lama dengan deskripsi ambigu (`fix: minor git bug`) serta typo penulisan delimiter (`fix; minor git bug`).
 
-### 2. Refaktor Pesan Commit (Simulasi di `08-Week-8-Mid-Project-Review/docs/review-checklist.md`)
+### 2. Refaktor Pesan Commit (Simulasi di `docs/review-checklist.md`)
 
 | Hash | Pesan Lama (Sebelum) | Pesan Baru (Sesudah) | Alasan & Justifikasi Perbaikan |
 | :--- | :--- | :--- | :--- |
@@ -67,13 +68,37 @@ Simulasi review sejawat dilakukan terhadap PR fitur dengan kriteria evaluasi ket
 
 ---
 
+## 🔍 Praktikum 3: Static Analysis, CI & Penilaian Tengah Semester
+
+### 1. Tiga Pemeriksaan Mesin (Clean Code Assurance)
+* **`flutter analyze`:** Lulus 100% tanpa error/warning (`No issues found!`) di seluruh root project dan sub-project `campus_notify`.
+* **`dart format --set-exit-if-changed lib test`:** Berhasil memformat 33 file Dart di `campus_notify` sesuai konvensi resmi Dart.
+* **`flutter test`:** 11/11 unit test dan widget test pada `campus_notify` berjalan hijau tanpa kegagalan.
+
+### 2. Penolakan Otomatis via CI (`.github/workflows/ci.yml`)
+Workflow GitHub Actions telah dikonfigurasi untuk menjalankan static analysis dan automated test secara otomatis pada setiap Pull Request.
+
+### 3. Bukti Tiga Grep Sterilitas Clean Architecture
+Aturan ketergantungan (*The Dependency Rule*) diverifikasi:
+1. `features/*/domain` bebas dari import `package:flutter/` $\rightarrow$ **0 Match (Steril)**.
+2. `features/*/domain` bebas dari import `package:dio|firebase|sqflite` $\rightarrow$ **0 Match (Steril)**.
+3. `features/*/presentation/pages` bebas dari import data layer (`data/`) $\rightarrow$ **0 Match (Steril)**.
+
+### 4. Status Kesiapan Paruh Semester
+* **Fondasi:** Terverifikasi kokoh, terstruktur Clean Architecture *feature-first*, dan siap dikembangkan untuk paruh kedua perkuliahan.
+
+---
+
 ## 📁 Struktur Dokumen Praktikum
 
 ```text
 244107020090-Mobile-Course/
+├── .github/
+│   └── workflows/
+│       └── ci.yml                # CI automation workflow
 └── 08-Week-8-Mid-Project-Review/
     ├── README.md                 # Laporan utama praktikum Minggu 8
     ├── docs/
-    │   └── review-checklist.md   # Checklist audit commit, template PR, & lembar peer review
+    │   └── review-checklist.md   # Checklist audit, review PR, dan hasil static analysis
     └── Screenshots/              # Bukti tangkapan layar praktikum
 ```

@@ -10,12 +10,12 @@ class AnnouncementModel extends Announcement {
   });
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'content': content,
-        'author': author,
-        'created_at': createdAt.toIso8601String(),
-      };
+    'id': id,
+    'title': title,
+    'content': content,
+    'author': author,
+    'created_at': createdAt.toIso8601String(),
+  };
 
   factory AnnouncementModel.fromJson(Map<String, dynamic> json) {
     return AnnouncementModel(
@@ -23,16 +23,17 @@ class AnnouncementModel extends Announcement {
       title: json['title'] as String? ?? '',
       content: json['content'] as String? ?? '',
       author: json['author'] as String? ?? '',
-      createdAt: DateTime.tryParse(json['created_at'] as String? ?? '') ??
+      createdAt:
+          DateTime.tryParse(json['created_at'] as String? ?? '') ??
           DateTime.now(),
     );
   }
 
   Announcement toEntity() => Announcement(
-        id: id,
-        title: title,
-        content: content,
-        author: author,
-        createdAt: createdAt,
-      );
+    id: id,
+    title: title,
+    content: content,
+    author: author,
+    createdAt: createdAt,
+  );
 }

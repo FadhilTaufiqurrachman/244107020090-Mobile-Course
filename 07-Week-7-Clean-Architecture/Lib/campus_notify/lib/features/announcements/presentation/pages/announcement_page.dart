@@ -14,13 +14,9 @@ class AnnouncementPage extends ConsumerWidget {
     final state = ref.watch(announcementDetailProvider(id));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detail Pengumuman'),
-      ),
+      appBar: AppBar(title: const Text('Detail Pengumuman')),
       body: state.when(
-        loading: () => const Center(
-          child: CircularProgressIndicator(),
-        ),
+        loading: () => const Center(child: CircularProgressIndicator()),
         error: (error, _) => Center(
           child: Padding(
             padding: const EdgeInsets.all(24.0),

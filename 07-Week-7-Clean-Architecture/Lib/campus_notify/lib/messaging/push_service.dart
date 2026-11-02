@@ -1,6 +1,7 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/foundation.dart';
+
 import '../routes.dart';
 
 final _local = FlutterLocalNotificationsPlugin();
@@ -119,8 +120,10 @@ Future<void> unsubscribeCampusTopic() async {
 Future<void> registerDeviceToken(String token) async {
   try {
     // Simulasi delegasi registrasi token perangkat ke endpoint /devices
-    debugPrint('Mock register device FCM ke backend sukses untuk token: $token');
+    debugPrint(
+      'Mock register device FCM ke backend sukses untuk token: $token',
+    );
   } catch (e) {
     debugPrint('Gagal mengirim token ke server: $e');
   }
-}
+}

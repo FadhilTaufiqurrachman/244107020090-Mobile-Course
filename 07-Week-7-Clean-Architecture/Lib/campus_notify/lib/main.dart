@@ -20,8 +20,9 @@ class MaskedTokenNotifier extends Notifier<String> {
   }
 }
 
-final maskedFcmTokenProvider =
-    NotifierProvider<MaskedTokenNotifier, String>(MaskedTokenNotifier.new);
+final maskedFcmTokenProvider = NotifierProvider<MaskedTokenNotifier, String>(
+  MaskedTokenNotifier.new,
+);
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -104,8 +105,9 @@ class _CampusNotifyAppState extends ConsumerState<CampusNotifyApp> {
     // 1. Inisialisasi token FCM dan kirim ke backend POST /devices
     await initFcmToken(
       onToken: (token) async {
-        final truncated =
-            token.length > 12 ? '${token.substring(0, 12)}...' : token;
+        final truncated = token.length > 12
+            ? '${token.substring(0, 12)}...'
+            : token;
         debugPrint('Token terpotong: $truncated');
         ref.read(maskedFcmTokenProvider.notifier).setToken(truncated);
 

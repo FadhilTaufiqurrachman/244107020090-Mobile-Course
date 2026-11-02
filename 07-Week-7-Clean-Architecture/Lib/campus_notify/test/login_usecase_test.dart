@@ -37,7 +37,10 @@ class FakeAuthRepository implements AuthRepository {
     String refreshToken,
   ) async {
     if (fail) {
-      return (refreshedToken: null, failure: const AuthFailure('Refresh gagal'));
+      return (
+        refreshedToken: null,
+        failure: const AuthFailure('Refresh gagal'),
+      );
     }
     return (refreshedToken: 'new-token', failure: null);
   }
@@ -45,23 +48,25 @@ class FakeAuthRepository implements AuthRepository {
 
 void main() {
   group('LoginUseCase Tests', () {
-    test('Berhasil login dan mengembalikan AuthSession tanpa failure', () async {
-      final repo = FakeAuthRepository(fail: false);
-      final useCase = LoginUseCase(repo);
+    test(
+      'Berhasil login dan mengembalikan AuthSession tanpa failure',
+      () async {
+        final repo = FakeAuthRepository(fail: false);
+        final useCase = LoginUseCase(repo);
 
-      final result = await useCase.call(
-        email: 'mahasiswa@kampus.ac.id',
-        password: 'password123',
-      );
+        final result = await useCase.call(
+          email: 'mahasiswa@kampus.ac.id',
+          password: 'password123',
+        );
 
-      expect(result.failure, isNull);
-      expect(result.session, isNotNull);
-      expect(result.session!.access, 'mock-access-token');
-      expect(result.session!.email, 'mahasiswa@kampus.ac.id');
-    });
+        expect(result.failure, isNull);
+        expect(result.session, isNotNull);
+        expect(result.session!.access, 'mock-access-token');
+        expect(result.session!.email, 'mahasiswa@kampus.ac.id');
+      },
+    );
 
-    test('Mengembalikan AuthFailure tanpa melempar exception saat kredensial salah',
-        () async {
+    test('Mengembalikan AuthFailure tanpa melempar exception saat kredensial salah', () async {
       final repo = FakeAuthRepository(fail: true);
       final useCase = LoginUseCase(repo);
 

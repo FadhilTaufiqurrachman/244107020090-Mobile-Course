@@ -11,8 +11,9 @@ class LoginPage extends ConsumerStatefulWidget {
 }
 
 class _LoginPageState extends ConsumerState<LoginPage> {
-  final _emailController =
-      TextEditingController(text: 'mahasiswa@kampus.ac.id');
+  final _emailController = TextEditingController(
+    text: 'mahasiswa@kampus.ac.id',
+  );
   final _passwordController = TextEditingController(text: 'rahasia123');
 
   @override
@@ -84,7 +85,9 @@ class _LoginPageState extends ConsumerState<LoginPage> {
                 onPressed: isLoading
                     ? null
                     : () {
-                        ref.read(authStateProvider.notifier).login(
+                        ref
+                            .read(authStateProvider.notifier)
+                            .login(
                               _emailController.text,
                               _passwordController.text,
                             );

@@ -8,12 +8,13 @@
 [![Conventional Commits](https://img.shields.io/badge/Commits-Conventional%20Commits-FE5196?logo=conventionalcommits&logoColor=white)](https://www.conventionalcommits.org/)
 [![CI Workflow](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/features/actions)
 [![AI Review](https://img.shields.io/badge/AI-Critical%20Verification-orange)](#)
+[![Code Review](https://img.shields.io/badge/Review-Approved-brightgreen)](#)
 
 ---
 
 ## 🧭 Ringkasan
 
-Minggu kedelapan difokuskan pada **Mid Project Review & Code Review**. Pada tahap tengah semester ini, fokus beralih ke kolaborasi profesional, disiplin Git (*Git Flow* dan *branch hygiene*), penulisan Pull Request yang terstruktur, *peer code review*, static analysis (`flutter analyze` & `dart format`), otomasi CI via GitHub Actions, verifikasi kritis review AI (*AI Challenge*), serta penilaian kesiapan fondasi project Flutter paruh pertama semester (Minggu 1 hingga 7: `week5_offline_notes` dan `campus_notify` Clean Architecture).
+Minggu kedelapan difokuskan pada **Mid Project Review & Code Review**. Pada tahap tengah semester ini, fokus beralih ke kolaborasi profesional, disiplin Git (*Git Flow* dan *branch hygiene*), penulisan Pull Request yang terstruktur, *peer code review*, static analysis (`flutter analyze` & `dart format`), otomasi CI via GitHub Actions, verifikasi kritis review AI (*AI Challenge*), refactoring tindak lanjut review, serta pengujian ketat (*automated testing*) untuk memastikan fondasi aplikasi paruh pertama semester (Minggu 1 hingga 7: `week5_offline_notes` dan `campus_notify` Clean Architecture) siap untuk paruh kedua.
 
 ---
 
@@ -73,7 +74,7 @@ Simulasi review sejawat dilakukan terhadap PR fitur dengan kriteria evaluasi ket
 ### 1. Tiga Pemeriksaan Mesin (Clean Code Assurance)
 * **`flutter analyze`:** Lulus 100% tanpa error/warning (`No issues found!`) di seluruh root project dan sub-project `campus_notify`.
 * **`dart format --set-exit-if-changed lib test`:** Berhasil memformat 33 file Dart di `campus_notify` sesuai konvensi resmi Dart.
-* **`flutter test`:** 11/11 unit test dan widget test pada `campus_notify` berjalan hijau tanpa kegagalan.
+* **`flutter test`:** 11/11 unit test dan widget test pada `campus_notify` berjalan hijau tanpa kegagalan (kemudian bertambah menjadi 12 test setelah refactoring).
 
 ### 2. Penolakan Otomatis via CI (`.github/workflows/ci.yml`)
 Workflow GitHub Actions telah dikonfigurasi untuk menjalankan static analysis dan automated test secara otomatis pada setiap Pull Request.
@@ -88,16 +89,28 @@ Aturan ketergantungan (*The Dependency Rule*) diverifikasi:
 
 ## 🤖 AI Challenge: Review Kritis vs Keputusan Mahasiswa
 
-Sesuai instruksi modul, dilakukan simulasi review menggunakan prompt Senior Flutter Developer terhadap arsitektur project. Hasil pengujian diverifikasi secara kritis dalam [**`docs/ai-review-vs-keputusan.md`**](docs/ai-review-vs-keputusan.md):
+Hasil audit mandiri terhadap saran AI didokumentasikan di [**`docs/ai-review-vs-keputusan.md`**](docs/ai-review-vs-keputusan.md):
+* **3 Temuan Diterima:** Kebocoran persistensi token di Presentation, throw raw Exception yang merusak sealed Failure, dan celah pengujian domain edge case.
+* **2 Temuan Ditolak:** Usulan mengimpor `Dio` ke Domain layer (pelanggaran fatal arsitektur) dan usulan formatting/style minor (sudah ditangani CI otomatis).
 
-* **Prompt:** Meminta review PR dengan fokus kebenaran, arsitektur Clean Architecture, dan test (mengabaikan style).
-* **Temuan Diterima (3):**
-  1. *AuthNotifier Direct Token Storage:* Presentation membocorkan detail persistensi data source (`TokenStore`) alih-alih dienkapsulasi pada Data Layer.
-  2. *Loss of Type Information:* Melempar `Exception` generik alih-alih mempertahankan sealed class `Failure`.
-  3. *Test Coverage Gap:* Menambahkan test case untuk validasi parameter kosong pada use case.
-* **Temuan Ditolak (2):**
-  1. *Pelanggaran Dependency Rule:* AI menyarankan mengimpor `Dio` (`CancelToken`) ke dalam Domain Layer $\rightarrow$ **Ditolak keras** karena merusak sterilitas domain.
-  2. *Nitpicking Style:* AI mengusulkan penataan urutan import alfabetis $\rightarrow$ **Ditolak** karena sudah dijamin oleh CI/formatter.
+---
+
+## 🔄 Refactoring, Testing, dan Error Umum
+
+### 1. Tindak Lanjut Refactoring Nyata
+* **Domain Input Sanitization:** Menambahkan validasi `id.trim().isEmpty` pada `GetAnnouncementDetail` use case.
+* **Penambahan Negative Test:** Menambahkan test case pengujian input whitespace pada `test/get_announcement_detail_test.dart`.
+* **Hasil Uji:** 12/12 unit test berjalan hijau (`All tests passed!`).
+
+### 2. Matriks Error Umum dan Solusinya
+
+| Gejala | Penyebab Umum | Solusi yang Diterapkan |
+| :--- | :--- | :--- |
+| PR 800 baris tak kunjung direview | Banyak fitur digabung satu PR | Pecah per fitur; satu PR < 300 baris diff |
+| Konflik merge berulang | Branch berumur panjang, jarang sinkron | Rebase/pull `develop` harian; umur branch < 3 hari |
+| Review hanya debat spasi | Tidak ada formatter/CI | Wajibkan `dart format` + CI `flutter analyze` otomatis |
+| Approve tapi bug lolos | Review tanpa pull + test | Reviewer wajib checkout, jalankan test, dan uji manual |
+| Saran AI merusak arsitektur | Saran AI diterima mentah tanpa verifikasi | Verifikasi kritis dengan uji sterilitas grep dan tolak jika melanggar Dependency Rule |
 
 ---
 

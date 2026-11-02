@@ -66,5 +66,19 @@ void main() {
         expect(result.failure!.message, contains('Pengumuman tidak ditemukan'));
       },
     );
+
+    test(
+      'Mengembalikan LocalFailure saat ID pengumuman kosong atau hanya spasi',
+      () async {
+        final repo = FakeAnnouncementRepository();
+        final useCase = GetAnnouncementDetail(repo);
+
+        final result = await useCase.call('   ');
+
+        expect(result.announcement, isNull);
+        expect(result.failure, isA<LocalFailure>());
+        expect(result.failure!.message, contains('tidak boleh kosong'));
+      },
+    );
   });
 }

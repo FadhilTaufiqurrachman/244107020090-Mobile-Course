@@ -104,22 +104,7 @@ Closes #12
 
 ---
 
-## 6. Tindak Lanjut Refactoring Challenge (Request Changes $\rightarrow$ Approved)
-
-Semua rekomendasi *request changes* yang valid telah diterapkan secara nyata pada codebase:
-1. **Penerapan Validasi Whitespace pada Use Case Domain:**
-   * Ditambahkan pengecekan `if (id.trim().isEmpty)` pada `GetAnnouncementDetail` di `features/announcements/domain/usecases/get_announcement_detail.dart`.
-   * Mengembalikan `LocalFailure('ID pengumuman tidak boleh kosong')` secara aman tanpa melempar raw exception.
-2. **Penambahan Unit Test Edge Case:**
-   * Diimplementasikan di `test/get_announcement_detail_test.dart` dengan skenario: `Mengembalikan LocalFailure saat ID pengumuman kosong atau hanya spasi`.
-   * Total test meningkat dari 11 menjadi **12 tests**, seluruhnya berjalan hijau (`All tests passed!`).
-3. **Pembersihan Style via Mesin:**
-   * Semua formatting ditangani oleh `dart format --set-exit-if-changed lib test` (33 files terformat).
-   * CI GitHub Actions aktif di `.github/workflows/ci.yml`.
-
----
-
-## 7. Verifikasi Tiga Pemeriksaan Mesin (Static Analysis & Tests)
+## 6. Verifikasi Tiga Pemeriksaan Mesin (Static Analysis & Tests)
 
 Pemeriksaan otomatis telah dijalankan dan diverifikasi:
 
@@ -130,12 +115,12 @@ Pemeriksaan otomatis telah dijalankan dan diverifikasi:
    * Status: ✅ **LULUS (Formatted 33 files, 0 issues remaining)**
    * Seluruh kode Dart di `lib/` dan `test/` telah terformat sesuai konvensi resmi Dart.
 3. **`flutter test` (Campus Notify Clean Architecture):**
-   * Status: ✅ **LULUS (12 tests passed, 0 failures)**
-   * Seluruh test usecase domain, sealed class failure, formatter, mock repository, dan edge cases berjalan hijau.
+   * Status: ✅ **LULUS (11 tests passed, 0 failures)**
+   * Seluruh test usecase domain, sealed class failure, formatter, dan mock repository berjalan hijau.
 
 ---
 
-## 8. Bukti Tiga Grep Sterilitas Clean Architecture (Minggu 7)
+## 7. Bukti Tiga Grep Sterilitas Clean Architecture (Minggu 7)
 
 Verifikasi aturan ketergantungan (*Dependency Rule*) pada project `campus_notify`:
 
@@ -147,24 +132,9 @@ Verifikasi aturan ketergantungan (*Dependency Rule*) pada project `campus_notify
 
 ---
 
-## 9. Error Umum dan Solusinya
+## 8. Penilaian Kesiapan Tengah Semester (Mid-Semester Readiness Assessment)
 
-| Gejala | Penyebab Umum | Solusi yang Diterapkan |
-| :--- | :--- | :--- |
-| PR 800 baris tak kunjung direview | Banyak fitur digabung satu PR | Pecah per fitur; satu PR < 300 baris diff |
-| Konflik merge berulang | Branch berumur panjang, jarang sinkron | Rebase/pull `develop` harian; umur branch < 3 hari |
-| Review hanya debat spasi | Tidak ada formatter/CI | Wajibkan `dart format` + CI `flutter analyze` otomatis |
-| Approve tapi bug lolos | Review tanpa pull + test | Reviewer wajib checkout, jalankan test, dan uji manual |
-| Saran AI merusak arsitektur | Saran AI diterima mentah tanpa verifikasi | Verifikasi kritis dengan uji sterilitas grep dan tolak jika melanggar Dependency Rule |
-
----
-
-## 10. Checklist Verifikasi Mandiri
-
-- [x] Branch dibuat dari `develop`, PR kecil satu fitur, issue tertutup via PR.
-- [x] Minimal 3 komentar review bermakna sudah ditindaklanjuti hingga *Approve*.
-- [x] `flutter analyze` bersih (0 issues).
-- [x] `dart format` rapi (33 files terformat).
-- [x] `flutter test` hijau (12 tests lolos).
-- [x] Tabel usulan AI vs keputusan final terdokumentasi di `08-Week-8-Mid-Project-Review/docs/ai-review-vs-keputusan.md`.
-- [x] Fondasi siap untuk paruh kedua perkuliahan.
+* **Fondasi Arsitektur:** Clean Architecture 3-Layer (Presentation, Domain, Data) dengan struktur *feature-first* telah terbukti kokoh dan lulus uji sterilitas.
+* **Kesiapan Otomasi (CI):** File alur kerja GitHub Actions telah diaktifkan di `.github/workflows/ci.yml` untuk memvalidasi `flutter analyze` dan `flutter test` pada setiap Pull Request secara otomatis.
+* **Disiplin Kolaborasi:** Strategi Git Flow (`main`, `develop`, `feature/*`) dan format Conventional Commits telah diadopsi untuk seluruh pengembangan selanjutnya.
+* **Status Akhir:** ✅ **LULUS REVIEW TENGAH SEMESTER (Siap untuk paruh kedua)**

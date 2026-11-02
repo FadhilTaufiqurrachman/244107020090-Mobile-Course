@@ -160,14 +160,49 @@ Beri 3 temuan + level blocker/saran + alasan.
 
 | No | Temuan AI | Level | Bukti Audit / Test | Keputusan | Alasan & Justifikasi Teknis Mahasiswa |
 |:--:|:---|:---:|:---|:---:|:---|
-| 1 | Tidak ada debouncing pada `onChanged` search bar | **Saran** | Kode di `notes_page.dart` memanggil `setQuery(value)` secara langsung. | ✅ **TERIMA + REFACTOR** | Saran valid untuk skala besar. Untuk aplikasi lokal berukuran ratusan item saat ini masih sangat responsif (<1ms), namun dicatat sebagai rekomendasi optimasi UX di masa depan. |
-| 2 | Pindahkan search ke native SQLite query & impor `sqflite` | **Blocker** | Diperiksa dari prinsip Clean Architecture & Offline-First. | ❌ **TOLAK KERAS** | **Pelanggaran Fatal Dependency Rule & Pola Offline-First!** Data catatan sudah di-cache secara reaktif di memori melalui `noteListProvider`. Membaca ulang disk SQLite setiap ketukan keyboard justru menambah latensi I/O dan merusak isolasi domain. Filter in-memory Dart jauh lebih cepat, deterministik, dan mudah diuji. |
+| 1 | Tidak ada debouncing pada `onChanged` search bar | **Saran** | Kode di `notes_page.dart` memanggil `setQuery(value)` secara langsung. | ✅ **TERIMA + REFACTOR** | Saran valid untuk skala dataset besar di masa mendatang, dicatat sebagai rekomendasi optimasi UX. |
+| 2 | Pindahkan search ke native SQLite query & impor `sqflite` | **Blocker** | Diperiksa dari prinsip Clean Architecture & Offline-First. | ❌ **TOLAK KERAS** | **Pelanggaran Fatal Dependency Rule!** Data catatan sudah di-cache secara reaktif di memori melalui `noteListProvider`. Membaca ulang disk SQLite setiap ketukan keyboard justru menambah latensi I/O dan merusak isolasi domain. Filter in-memory Dart jauh lebih cepat, deterministik, dan mudah diuji. |
 | 3 | Tambahkan pengujian untuk karakter khusus / simbol regex | **Saran** | `widget_test.dart` awalnya baru menguji kata biasa. | ✅ **TERIMA & DIPERBAIKI** | **Meningkatkan Keamanan Test.** Ditambahkan test case `test('query dengan simbol khusus atau regex characters aman')` untuk membuktikan bahwa implementasi substring `String.contains()` aman dari crash parsing regex. |
 
 ---
 
-### D. AI Verification Checklist
-- [x] Minimal 1 saran AI terbukti benar dengan bukti konkret (Temuan 1 dan 3).
-- [x] Minimal 1 saran AI ditolak dengan alasan teknis tertulis (Temuan 2: menolak perusakan isolasi layer SQLite).
-- [x] Keputusan tiap file terdokumentasi jelas (terima, terima + refactor, tolak).
-- [x] Mampu menjelaskan alasan teknis secara mandiri tanpa bergantung pada teks AI.
+## 6. Refactoring, Testing, dan Error Umum
+
+### A. Eksekusi Pengujian Terdedikasi (`test/search_filter_test.dart`)
+
+Pengujian komprehensif mencakup 4 skenario unit test logika filter dan 1 widget test untuk empty state & interaksi tombol clear:
+
+```bash
+cd "05-Week-5-Local-Storage-Offline-First/Lib/week5_offline_notes"
+flutter test test/search_filter_test.dart
+```
+
+**Log Output Pengujian:**
+```text
+00:00 +0: SearchNotesUseCase Unit Tests filter abaikan huruf besar/kecil (case-insensitive)
+00:00 +1: SearchNotesUseCase Unit Tests query tak cocok kembalikan kosong (empty match)
+00:00 +2: SearchNotesUseCase Unit Tests query spasi saja mengembalikan semua catatan tanpa filter salah
+00:00 +3: SearchNotesUseCase Unit Tests query dengan simbol regex / karakter khusus tetap aman tanpa crash
+00:00 +4: Search & Empty State Widget Tests menampilkan icon dan pesan empty state saat query pencarian tidak cocok
+00:00 +5: All tests passed!
+```
+
+### B. Matriks Error Umum dan Solusinya
+
+| Gejala Masalah | Penyebab Umum | Solusi yang Diterapkan |
+| :--- | :--- | :--- |
+| **Method tidak ada** | Halusinasi API oleh AI (mengarang method yang tidak ada di Dart/Flutter) | Selalu periksa via autocompletion IDE dan dokumentasi resmi di `pub.dev` |
+| **Import lintas layer** | Kurangnya konteks arsitektur pada prompt AI | Tegaskan batasan arsitektur pada prompt dan lakukan refactor pemisahan layer |
+| **Semua test merah** | Prompt yang diajukan terlalu besar dan meminta banyak hal sekaligus | Pecah menjadi 1 fitur kecil + 1 unit test terfokus secara bertahap |
+| **Prompt diulang terus tanpa hasil** | Meminta AI memperbaiki kode tanpa data error reproduksi | Tuliskan langkah reproduksi yang jelas disertai test merah pembukti bug |
+| **Tak bisa menjelaskan kode hasil AI** | Menerima kode AI secara mentah tanpa membaca ulang baris demi baris | Baca ulang setiap baris, sederhanakan logika, dan lakukan uji manual |
+
+---
+
+### C. Checklist Verifikasi Mandiri
+
+- [x] Prompt 5 slot + konteks arsitektur tercatat di `docs/ai-log.md`.
+- [x] `flutter analyze` bersih (0 warning/error di seluruh workspace).
+- [x] `flutter test` hijau (13/13 tests lolos di `week5_offline_notes`).
+- [x] 1 temuan AI dibuktikan benar (Temuan 3 regex special char) & 1 ditolak beralasan teknis (Temuan 2 SQLite query).
+- [x] Mampu menjelaskan setiap baris logika tanpa membuka catatan AI.

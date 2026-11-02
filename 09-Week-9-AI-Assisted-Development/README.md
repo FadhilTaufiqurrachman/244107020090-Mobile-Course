@@ -8,6 +8,7 @@
 [![Clean Architecture](https://img.shields.io/badge/Architecture-Clean%20Architecture-009688)](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
 [![Riverpod](https://img.shields.io/badge/State%20Management-Riverpod-1976D2)](https://riverpod.dev/)
 [![AI Challenge](https://img.shields.io/badge/AI-Critical%20Verification-orange)](#)
+[![Tests Passing](https://img.shields.io/badge/Tests-13%2F13%20Passing-brightgreen)](#)
 
 ## 🧭 Ringkasan
 
@@ -48,7 +49,9 @@ Setelah menyelesaikan praktikum ini, saya diharapkan mampu:
 │           │   │   ├── services/search_notes.dart     # Ekstraksi Use Case murni hasil refactoring
 │           │   │   └── providers/note_provider.dart   # Riverpod reactive state binding
 │           │   └── pages/notes_page.dart              # UI search bar & dynamic empty state
-│           └── test/widget_test.dart                  # Automated unit test search & validation
+│           └── test/
+│               ├── search_filter_test.dart            # Test suite terdedikasi (unit & widget tests)
+│               └── widget_test.dart                   # Automated regression tests
 └── 09-Week-9-AI-Assisted-Development/
     ├── README.md                                      # Laporan lengkap praktikum Minggu 9
     ├── docs/
@@ -78,6 +81,11 @@ Dari direktori project `week5_offline_notes`:
 
 ```bash
 cd "05-Week-5-Local-Storage-Offline-First/Lib/week5_offline_notes"
+
+# Menjalankan test suite pencarian dan empty state
+flutter test test/search_filter_test.dart
+
+# Menjalankan seluruh regression test
 flutter test
 ```
 
@@ -196,8 +204,8 @@ widget (NotesPage: UI & TextField controller saja)
 ### 3. Hasil Tiga Verifikasi Mesin
 
 * **`flutter analyze`:** ✅ **`No issues found!`** (0 warning, 0 error) di seluruh workspace.
-* **`dart format --set-exit-if-changed lib test`:** ✅ Seluruh 15 file Dart terformat rapi sesuai panduan resmi Dart.
-* **`flutter test`:** ✅ **8/8 unit tests passed!**
+* **`dart format --set-exit-if-changed lib test`:** ✅ Seluruh file Dart terformat rapi sesuai panduan resmi Dart.
+* **`flutter test`:** ✅ **13/13 unit tests passed!**
 
 ---
 
@@ -216,7 +224,7 @@ Beri 3 temuan + level blocker/saran + alasan.
 
 | No | Temuan AI | Level | Bukti Audit / Test | Keputusan | Alasan & Justifikasi Teknis |
 |:--:|:---|:---:|:---|:---:|:---|
-| 1 | Tidak ada debouncing pada `onChanged` search bar | **Saran** | Kode di `notes_page.dart` memanggil `setQuery(value)` secara langsung. | ✅ **TERIMA + REFACTOR** | Saran valid untuk skala dataset besar di masa mendatang, dicatat sebagai perbaikan UX. |
+| 1 | Tidak ada debouncing pada `onChanged` search bar | **Saran** | Kode di `notes_page.dart` memanggil `setQuery(value)` secara langsung. | ✅ **TERIMA + REFACTOR** | Saran valid untuk skala dataset besar di masa mendatang, dicatat sebagai rekomendasi optimasi UX. |
 | 2 | Pindahkan search ke native SQLite query & impor `sqflite` | **Blocker** | Diperiksa dari prinsip Clean Architecture & Offline-First. | ❌ **TOLAK KERAS** | **Pelanggaran Fatal Dependency Rule!** Data catatan sudah di-cache secara reaktif di memori melalui `noteListProvider`. Membaca ulang disk SQLite setiap ketukan keyboard justru menambah latensi I/O dan merusak isolasi domain. Filter in-memory Dart jauh lebih cepat, deterministik, dan mudah diuji. |
 | 3 | Tambahkan pengujian untuk karakter khusus / simbol regex | **Saran** | `widget_test.dart` awalnya baru menguji kata biasa. | ✅ **TERIMA & DIPERBAIKI** | **Meningkatkan Keamanan Test.** Ditambahkan test case `test('query dengan simbol khusus atau regex characters aman')` untuk membuktikan bahwa implementasi substring `String.contains()` aman dari crash parsing regex. |
 
@@ -225,3 +233,41 @@ Beri 3 temuan + level blocker/saran + alasan.
 - [x] Minimal 1 saran AI ditolak dengan alasan teknis tertulis (Temuan 2: menolak perusakan isolasi layer SQLite).
 - [x] Keputusan tiap file terdokumentasi jelas (terima, terima + refactor, tolak).
 - [x] Mampu menjelaskan alasan teknis secara mandiri tanpa membuka AI.
+
+---
+
+## 🧪 Refactoring, Testing, dan Error Umum
+
+### 1. Tindak Lanjut Refactoring Nyata
+* **Pemecahan Kode Modular:** Hasil generasi AI yang panjang dipecah menjadi kelas Use Case terpisah (`SearchNotesUseCase`), provider independen, dan UI widget yang ramping.
+* **Isolasi Layer Domain Murni:** Logika filter tidak diletakkan di dalam `NotesPage` (widget build), melainkan dipanggil secara deklaratif melalui Riverpod `filteredNotesProvider`.
+* **Zero Cross-Layer Imports:** Widget hanya mengimpor provider, provider mengimpor use case, dan use case steril dari framework UI Flutter.
+
+### 2. Eksekusi Pengujian Terdedikasi (`test/search_filter_test.dart`)
+
+```text
+00:00 +0: SearchNotesUseCase Unit Tests filter abaikan huruf besar/kecil (case-insensitive)
+00:00 +1: SearchNotesUseCase Unit Tests query tak cocok kembalikan kosong (empty match)
+00:00 +2: SearchNotesUseCase Unit Tests query spasi saja mengembalikan semua catatan tanpa filter salah
+00:00 +3: SearchNotesUseCase Unit Tests query dengan simbol regex / karakter khusus tetap aman tanpa crash
+00:00 +4: Search & Empty State Widget Tests menampilkan icon dan pesan empty state saat query pencarian tidak cocok
+00:00 +5: All tests passed!
+```
+
+### 3. Matriks Error Umum dan Solusinya
+
+| Gejala Masalah | Penyebab Umum | Solusi yang Diterapkan |
+| :--- | :--- | :--- |
+| **Method tidak ada** | Halusinasi API oleh AI (mengarang method yang tidak ada di Dart/Flutter) | Selalu periksa via autocompletion IDE dan dokumentasi resmi di `pub.dev` |
+| **Import lintas layer** | Kurangnya konteks arsitektur pada prompt AI | Tegaskan batasan arsitektur pada prompt dan lakukan refactor pemisahan layer |
+| **Semua test merah** | Prompt yang diajukan terlalu besar dan meminta banyak hal sekaligus | Pecah menjadi 1 fitur kecil + 1 unit test terfokus secara bertahap |
+| **Prompt diulang terus tanpa hasil** | Meminta AI memperbaiki kode tanpa data error reproduksi | Tuliskan langkah reproduksi yang jelas disertai test merah pembukti bug |
+| **Tak bisa menjelaskan kode hasil AI** | Menerima kode AI secara mentah tanpa membaca ulang baris demi baris | Baca ulang setiap baris, sederhanakan logika, dan lakukan uji manual |
+
+### 4. Checklist Verifikasi Mandiri
+
+- [x] Prompt 5 slot + konteks arsitektur tercatat di `docs/ai-log.md`.
+- [x] `flutter analyze` bersih (0 warning/error di seluruh workspace).
+- [x] `flutter test` hijau (13/13 tests lolos di `week5_offline_notes`).
+- [x] 1 temuan AI dibuktikan benar (Temuan 3 regex special char) & 1 ditolak beralasan teknis (Temuan 2 SQLite query).
+- [x] Mampu menjelaskan setiap baris logika tanpa membuka catatan AI.

@@ -7,13 +7,13 @@
 [![Git Flow](https://img.shields.io/badge/Git-Git%20Flow-F05032?logo=git&logoColor=white)](https://git-scm.com/)
 [![Conventional Commits](https://img.shields.io/badge/Commits-Conventional%20Commits-FE5196?logo=conventionalcommits&logoColor=white)](https://www.conventionalcommits.org/)
 [![CI Workflow](https://img.shields.io/badge/CI-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)](https://github.com/features/actions)
-[![Code Review](https://img.shields.io/badge/Review-Peer%20Review-green)](#)
+[![AI Review](https://img.shields.io/badge/AI-Critical%20Verification-orange)](#)
 
 ---
 
 ## 🧭 Ringkasan
 
-Minggu kedelapan difokuskan pada **Mid Project Review & Code Review**. Pada tahap tengah semester ini, fokus beralih ke kolaborasi profesional, disiplin Git (*Git Flow* dan *branch hygiene*), penulisan Pull Request yang terstruktur, *peer code review*, static analysis (`flutter analyze` & `dart format`), otomasi CI via GitHub Actions, serta penilaian kesiapan fondasi project Flutter paruh pertama semester (Minggu 1 hingga 7: `week5_offline_notes` dan `campus_notify` Clean Architecture).
+Minggu kedelapan difokuskan pada **Mid Project Review & Code Review**. Pada tahap tengah semester ini, fokus beralih ke kolaborasi profesional, disiplin Git (*Git Flow* dan *branch hygiene*), penulisan Pull Request yang terstruktur, *peer code review*, static analysis (`flutter analyze` & `dart format`), otomasi CI via GitHub Actions, verifikasi kritis review AI (*AI Challenge*), serta penilaian kesiapan fondasi project Flutter paruh pertama semester (Minggu 1 hingga 7: `week5_offline_notes` dan `campus_notify` Clean Architecture).
 
 ---
 
@@ -84,8 +84,20 @@ Aturan ketergantungan (*The Dependency Rule*) diverifikasi:
 2. `features/*/domain` bebas dari import `package:dio|firebase|sqflite` $\rightarrow$ **0 Match (Steril)**.
 3. `features/*/presentation/pages` bebas dari import data layer (`data/`) $\rightarrow$ **0 Match (Steril)**.
 
-### 4. Status Kesiapan Paruh Semester
-* **Fondasi:** Terverifikasi kokoh, terstruktur Clean Architecture *feature-first*, dan siap dikembangkan untuk paruh kedua perkuliahan.
+---
+
+## 🤖 AI Challenge: Review Kritis vs Keputusan Mahasiswa
+
+Sesuai instruksi modul, dilakukan simulasi review menggunakan prompt Senior Flutter Developer terhadap arsitektur project. Hasil pengujian diverifikasi secara kritis dalam [**`docs/ai-review-vs-keputusan.md`**](docs/ai-review-vs-keputusan.md):
+
+* **Prompt:** Meminta review PR dengan fokus kebenaran, arsitektur Clean Architecture, dan test (mengabaikan style).
+* **Temuan Diterima (3):**
+  1. *AuthNotifier Direct Token Storage:* Presentation membocorkan detail persistensi data source (`TokenStore`) alih-alih dienkapsulasi pada Data Layer.
+  2. *Loss of Type Information:* Melempar `Exception` generik alih-alih mempertahankan sealed class `Failure`.
+  3. *Test Coverage Gap:* Menambahkan test case untuk validasi parameter kosong pada use case.
+* **Temuan Ditolak (2):**
+  1. *Pelanggaran Dependency Rule:* AI menyarankan mengimpor `Dio` (`CancelToken`) ke dalam Domain Layer $\rightarrow$ **Ditolak keras** karena merusak sterilitas domain.
+  2. *Nitpicking Style:* AI mengusulkan penataan urutan import alfabetis $\rightarrow$ **Ditolak** karena sudah dijamin oleh CI/formatter.
 
 ---
 
@@ -95,10 +107,11 @@ Aturan ketergantungan (*The Dependency Rule*) diverifikasi:
 244107020090-Mobile-Course/
 ├── .github/
 │   └── workflows/
-│       └── ci.yml                # CI automation workflow
+│       └── ci.yml                     # CI automation workflow
 └── 08-Week-8-Mid-Project-Review/
-    ├── README.md                 # Laporan utama praktikum Minggu 8
+    ├── README.md                      # Laporan utama praktikum Minggu 8
     ├── docs/
-    │   └── review-checklist.md   # Checklist audit, review PR, dan hasil static analysis
-    └── Screenshots/              # Bukti tangkapan layar praktikum
+    │   ├── review-checklist.md        # Checklist audit, review PR, dan hasil static analysis
+    │   └── ai-review-vs-keputusan.md  # Analisis kritis temuan AI vs keputusan teknis
+    └── Screenshots/                   # Bukti tangkapan layar praktikum
 ```

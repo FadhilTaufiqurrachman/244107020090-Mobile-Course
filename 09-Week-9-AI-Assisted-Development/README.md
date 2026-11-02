@@ -10,7 +10,7 @@
 
 ## 🧭 Ringkasan
 
-Minggu kesembilan membahas penerapan alur kerja **AI-Assisted Development** (atau yang populer dengan istilah *Vibe Coding*) secara bijak, terkendali, dan profesional. Fokus utama adalah memanfaatkan AI coding assistant untuk mempercepat penulisan fitur Flutter baru (fitur pencarian / *search feature*) pada basis kode yang sudah ada (`campus_notify` Clean Architecture atau `week5_offline_notes`), sembari menerapkan verifikasi ketat terhadap halusinasi AI, kepatuhan arsitektur, pengujian otomatis, dan *refactoring* ke standar Clean Architecture.
+Minggu kesembilan membahas penerapan alur kerja **AI-Assisted Development** (atau yang populer dengan istilah *Vibe Coding*) secara bijak, terkendali, dan profesional. Fokus utama adalah memanfaatkan AI coding assistant untuk mempercepat penulisan fitur Flutter baru (fitur pencarian / *search feature*) pada basis kode yang sudah ada (`week5_offline_notes`), sembari menerapkan verifikasi ketat terhadap halusinasi AI, kepatuhan arsitektur, pengujian otomatis, dan *refactoring* ke standar Clean Architecture.
 
 ## 🎯 Tujuan Pembelajaran
 
@@ -52,7 +52,7 @@ Setelah menyelesaikan praktikum ini, saya diharapkan mampu:
 
 - Git terkonfigurasi pada branch pengembangan;
 - Flutter SDK (>= 3.47.0) dan Dart SDK (>= 3.13.0);
-- Project dasar Minggu 7 (`campus_notify` Clean Architecture) yang telah lolos review di Minggu 8;
+- Project dasar `week5_offline_notes`;
 - Terminal PowerShell / Bash.
 
 Verifikasi kesiapan awal:
@@ -121,5 +121,42 @@ Output:  Kode provider + widget UI + 2 unit test + instruksi pengujian
 ### 3. Privasi dan Masking Konteks
 
 Sebelum melampirkan basis kode ke prompt AI:
-* Seluruh kredensial sensitif seperti token FCM, API secret, dan kredensial JWT disensor menggunakan placeholder (`TOKEN_PLACEHOLDER`);
+* Seluruh kredensial sensitif disensor menggunakan placeholder (`TOKEN_PLACEHOLDER`);
 * Hanya sertakan file yang relevan (kontrak repository, model entitas, atau cuplikan `pubspec.yaml`), bukan keseluruhan project.
+
+---
+
+## 🔍 Praktikum 2: Generate dan Verifikasi Search
+
+### 1. Generasi Fitur Pencarian Judul Catatan
+
+Fitur pencarian diimplementasikan pada `week5_offline_notes` dengan draf awal yang dihasilkan melalui AI prompt:
+* Penambahan `searchQueryProvider` berbasis Riverpod `NotifierProvider`.
+* Penambahan fungsi murni `filterNotes(List<Note> notes, String query)`.
+* Penambahan `filteredNotesProvider` untuk reaktivitas UI secara instan.
+* Integrasi `TextField` pencarian dan tampilan *Empty State* pada `NotesPage`.
+
+### 2. Verifikasi 6 Langkah
+
+1. **Baca baris demi baris:** Memahami struktur query state dan penyaringan list.
+2. **Cek import sterilitas:** Tidak ada kebocoran import database SQLite ke dalam UI.
+3. **Cek API:** Menggunakan `NotifierProvider` Riverpod terkini, bukan `StateProvider` usang.
+4. **Static Analysis:** `flutter analyze` berjalan bersih tanpa warning (`No issues found!`).
+5. **Testing Otomatis (Bukti Halusinasi & Bug Logika AI):**
+   * *Temuan Bug AI:* Draf kode awal AI menggunakan `contains(query)` langsung yang bersifat *case-sensitive*, sehingga pencarian `"belanja"` gagal menemukan `"Belanja Sayur"`. Selain itu, input whitespace `"   "` meloloskan string kosong ke pencarian.
+   * *Solusi Terverifikasi:* Menggunakan `.trim().toLowerCase()` pada query dan `.toLowerCase()` pada field judul note.
+6. **Uji Manual:** Menghasilkan 3 status responsif: *Daftar Utuh (Query Kosong)* $\rightarrow$ *Daftar Tersaring (Query Cocok)* $\rightarrow$ *Empty State (Query Tak Cocok)*.
+
+### 3. Bukti Pengujian Unit Test
+
+```text
+00:00 +0: fromMap aman terhadap field yang hilang
+00:00 +1: flag dirty bertahan pada serialisasi
+00:00 +2: provider sukses dengan repository palsu
+00:00 +3: provider error dengan repository palsu
+00:00 +4: filter abaikan huruf besar/kecil
+00:00 +5: query tak cocok kembalikan kosong
+00:00 +6: query spasi saja mengembalikan semua catatan tanpa error
+00:00 +7: All tests passed!
+```
+Seluruh 7 unit test pada `week5_offline_notes` **lulus 100%**.

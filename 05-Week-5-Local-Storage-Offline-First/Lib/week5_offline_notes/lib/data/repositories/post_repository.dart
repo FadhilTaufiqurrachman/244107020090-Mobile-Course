@@ -1,11 +1,13 @@
-import 'dart:convert'; 
+import 'dart:convert';
+
 import 'package:dio/dio.dart';
-import 'package:sqflite/sqflite.dart'; 
+import 'package:sqflite/sqflite.dart';
+
 import '../models/post.dart';
 
 class PostRepository {
   PostRepository(this._dio, {required this.openDb});
-  
+
   final Dio _dio;
   final Future<Database> Function() openDb;
 
@@ -26,15 +28,15 @@ class PostRepository {
 
   Future<List<Post>> loadPostsCacheFirst() async {
     final cached = await readCachedPosts();
-    refreshPostsInBackground(); 
-    
+    refreshPostsInBackground();
+
     return cached;
   }
 
   Future<List<Post>> readCachedPosts() async {
     final db = await openDb();
     final rows = await db.query('cached_posts');
-  
+
     return rows.map((row) {
       final payloadString = row['payload'] as String;
       final jsonMap = jsonDecode(payloadString);
@@ -47,22 +49,18 @@ class PostRepository {
       final response = await _dio.get<List>('/posts');
       final data = response.data ?? [];
       final posts = data.whereType<Map<String, dynamic>>().toList();
-      
+
       final db = await openDb();
-      
+
       for (var item in posts) {
-        await db.insert(
-          'cached_posts', 
-          {
-            'id': item['id'],
-            'payload': jsonEncode(item), 
-            'cached_at': DateTime.now().toIso8601String(),
-          },
-          conflictAlgorithm: ConflictAlgorithm.replace, 
-        );
+        await db.insert('cached_posts', {
+          'id': item['id'],
+          'payload': jsonEncode(item),
+          'cached_at': DateTime.now().toIso8601String(),
+        }, conflictAlgorithm: ConflictAlgorithm.replace);
       }
     } catch (e) {
-      // Tangkap error secara diam-diam. 
+      // Tangkap error secara diam-diam.
       // Jika error terjadi karena sedang offline (mode pesawat), aplikasi tidak akan crash.
     }
   }

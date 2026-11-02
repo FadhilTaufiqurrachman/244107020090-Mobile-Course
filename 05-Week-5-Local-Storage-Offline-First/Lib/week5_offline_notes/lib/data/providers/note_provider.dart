@@ -1,4 +1,5 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../local/db.dart';
 import '../local/note.dart';
 import '../repositories/note_repository.dart';
@@ -8,18 +9,20 @@ final noteRepositoryProvider = Provider<NoteRepository>((ref) {
   return NoteRepository(openDb: openNotesDb);
 });
 
-final forceOfflineProvider = NotifierProvider<ForceOfflineNotifier, bool>(ForceOfflineNotifier.new);
+final forceOfflineProvider = NotifierProvider<ForceOfflineNotifier, bool>(
+  ForceOfflineNotifier.new,
+);
 
 class ForceOfflineNotifier extends Notifier<bool> {
   @override
-  bool build() => false; 
+  bool build() => false;
   void toggle(bool value) {
     state = value;
   }
 }
 
 final dirtyCountProvider = FutureProvider<int>((ref) async {
-  ref.watch(noteListProvider); 
+  ref.watch(noteListProvider);
   final repo = ref.watch(noteRepositoryProvider);
   return await repo.countDirty();
 });
@@ -56,7 +59,43 @@ class NoteListNotifier extends AsyncNotifier<List<Note>> {
   }
 }
 
+// --- FITUR SEARCH (WEEK 9 AI-ASSISTED DEVELOPMENT) ---
+
+final searchQueryProvider = NotifierProvider<SearchQueryNotifier, String>(
+  SearchQueryNotifier.new,
+);
+
+class SearchQueryNotifier extends Notifier<String> {
+  @override
+  String build() => '';
+
+  void setQuery(String query) {
+    state = query;
+  }
+
+  void clear() {
+    state = '';
+  }
+}
+
+/// Fungsi murni penyaring catatan: case-insensitive & sanitasi whitespace
+List<Note> filterNotes(List<Note> notes, String query) {
+  final cleanQuery = query.trim().toLowerCase();
+  if (cleanQuery.isEmpty) return notes;
+  return notes
+      .where((note) => note.title.toLowerCase().contains(cleanQuery))
+      .toList();
+}
+
+/// Provider daftar catatan yang telah terfilter berdasarkan query pencarian
+final filteredNotesProvider = Provider<AsyncValue<List<Note>>>((ref) {
+  final notesAsync = ref.watch(noteListProvider);
+  final query = ref.watch(searchQueryProvider);
+
+  return notesAsync.whenData((notes) => filterNotes(notes, query));
+});
+
 final noteDetailProvider = FutureProvider.family<Note?, int>((ref, id) async {
-  final repo = NoteRepository(); 
+  final repo = NoteRepository();
   return await repo.getNoteById(id);
 });

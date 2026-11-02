@@ -1,25 +1,18 @@
 import 'package:flutter/material.dart';
+
 import '../data/local/note.dart';
 
 class NoteTile extends StatelessWidget {
   final Note note;
   final VoidCallback onTap;
 
-  const NoteTile({
-    super.key,
-    required this.note,
-    required this.onTap,
-  });
+  const NoteTile({super.key, required this.note, required this.onTap});
 
   @override
   Widget build(BuildContext context) {
     return ListTile(
       title: Text(note.title),
-      subtitle: Text(
-        note.body,
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-      ),
+      subtitle: Text(note.body, maxLines: 1, overflow: TextOverflow.ellipsis),
       // Menampilkan badge/ikon jika data masih 'dirty'
       trailing: note.dirty
           ? const Tooltip(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../data/providers/note_provider.dart';
 
 class NoteDetailPage extends ConsumerWidget {
@@ -13,9 +14,7 @@ class NoteDetailPage extends ConsumerWidget {
     final noteAsync = ref.watch(noteDetailProvider(noteId));
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Detail Catatan'),
-      ),
+      appBar: AppBar(title: const Text('Detail Catatan')),
       body: noteAsync.when(
         data: (note) {
           if (note == null) {
@@ -36,10 +35,7 @@ class NoteDetailPage extends ConsumerWidget {
                   style: const TextStyle(color: Colors.grey),
                 ),
                 const SizedBox(height: 16),
-                Text(
-                  note.body,
-                  style: Theme.of(context).textTheme.bodyLarge,
-                ),
+                Text(note.body, style: Theme.of(context).textTheme.bodyLarge),
               ],
             ),
           );

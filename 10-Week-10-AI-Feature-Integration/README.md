@@ -1,0 +1,240 @@
+# Minggu 10 — Integrasi Fitur AI
+
+> Dokumentasi Praktikum Mata Kuliah **Pemrograman Mobile**.
+
+[![Dart](https://img.shields.io/badge/Dart-3.13.2-0175C2?logo=dart&logoColor=white)](https://dart.dev/)
+[![Flutter](https://img.shields.io/badge/Flutter-Material%203-02569B?logo=flutter&logoColor=white)](https://flutter.dev/)
+[![AI Integration](https://img.shields.io/badge/AI-LLM%20%26%20Vision-FF6F00?logo=google&logoColor=white)](#)
+[![Clean Architecture](https://img.shields.io/badge/Architecture-Clean%20Architecture-009688)](https://blog.cleancoder.com/uncle-bob/2012/08/13/the-clean-architecture.html)
+[![Riverpod](https://img.shields.io/badge/State%20Management-Riverpod-1976D2)](https://riverpod.dev/)
+
+## 🧭 Ringkasan
+
+Minggu kesepuluh membahas penerapan dan integrasi **Fitur Kecerdasan Buatan (AI Integration)** secara langsung ke dalam aplikasi mobile Flutter. Melanjutkan fondasi **Clean Architecture** pada aplikasi **Campus Notify** dari Minggu 7–9, praktikum ini memperluas kapabilitas sistem dengan mengintegrasikan Large Language Model (LLM) API (seperti Google Gemini API), antarmuka percakapan interaktif (*Chat Interface*) dengan *streaming response*, kapabilitas pemahaman multimodal (OCR / Image Understanding), serta penerapan perlindungan privasi, efisiensi kuota/biaya, *error handling*, dan *fallback design* yang tangguh.
+
+## 🎯 Tujuan Pembelajaran
+
+Setelah menyelesaikan praktikum ini, saya diharapkan mampu:
+
+1. Memahami konsep dasar integrasi LLM API ke aplikasi mobile;
+2. Merancang *chat interface* dengan *streaming response* yang interaktif dan responsif;
+3. Mengintegrasikan kemampuan OCR, *Speech-to-Text*, dan *Image Understanding* (multimodal AI);
+4. Menerapkan *prompt design* yang aman, terstruktur, dan efektif untuk mobile;
+5. Menangani aspek privasi pengguna, efisiensi biaya API, penanganan error jaringan, dan *fallback design*;
+6. Mengevaluasi pengalaman pengguna (*User Experience / UX*) pada fitur berbasis AI.
+
+## 🧰 Teknologi dan Tools
+
+| Komponen | Penggunaan |
+| --- | --- |
+| **Dart (3.13.2)** | Bahasa pemrograman aplikasi mobile, stream handling, dan unit testing |
+| **Flutter** | Framework UI lintas platform berbasis Material 3 |
+| **Google Generative AI / Gemini API** | Layanan LLM & Multimodal AI untuk chat streaming dan image understanding |
+| **Clean Architecture** | Pola arsitektur 3-layer (Presentation, Domain, Data) berbasis Feature-First |
+| **Flutter Riverpod** | Dependency Injection dan declarative reactive state management (`StreamProvider`, `AsyncNotifier`) |
+| **Flutter Secure Storage** | Penyimpanan aman API key LLM di keychain/keystore perangkat mobile |
+| **GoRouter** | Declarative navigation dan rute antarmuka fitur AI |
+| **Visual Studio Code** | IDE utama untuk pengembangan Flutter, debugging, dan pengujian |
+
+## 📂 Struktur Folder
+
+```text
+244107020090-Mobile-Course/
+└── 10-Week-10-AI-Feature-Integration/
+    ├── README.md                                      # Laporan lengkap praktikum Minggu 10
+    ├── docs/                                          # Dokumen perancangan prompt, privasi, & fallback
+    ├── Screenshots/                                   # Bukti tangkapan layar antarmuka & pengujian
+    └── Lib/
+        └── campus_notify/                             # Project utama hasil salinan Minggu 7
+            ├── lib/                                   # Source code Clean Architecture
+            └── test/                                  # Automated tests
+```
+
+## 🚀 Cara Menjalankan
+
+### Persyaratan
+
+- Flutter SDK (>= 3.47.0) dan Dart SDK (>= 3.13.0);
+- API Key dari penyedia LLM (misalnya Google Gemini API Key);
+- Visual Studio Code dengan ekstensi Flutter/Dart;
+- Perangkat Android fisik atau Emulator Android.
+
+Verifikasi kesiapan awal:
+
+```bash
+flutter --version
+flutter doctor -v
+```
+
+## 🏛️ Konsep Integrasi Fitur AI
+
+### 1. Apa itu Integrasi Fitur AI?
+
+Integrasi fitur AI memungkinkan aplikasi mobile berkomunikasi dengan model AI modern di cloud untuk memberikan pengalaman cerdas dan adaptif kepada pengguna:
+* **Chat Asisten:** Tanya jawab real-time interaktif menggunakan Large Language Model (LLM) API;
+* **OCR (Optical Character Recognition):** Ekstraksi teks dari foto dokumen atau poster acara;
+* **Speech-to-Text (STT):** Konversi transkrip suara pengguna menjadi perintah teks;
+* **Image Understanding:** Deskripsi visual, analisis konteks gambar, dan tanya jawab visual multimodal;
+* **Recommendation Engine:** Rekomendasi konten pengumuman kampus yang dipersonalisasi berdasarkan preferensi pengguna.
+
+### 2. Arsitektur Integrasi AI pada Mobile
+
+```text
++-------------------+       HTTPS / WSS       +--------------------+
+|    Flutter UI     | <---------------------> |    AI API Layer    |
+| (Chat, OCR, STT,  |      (Dio / HTTP)       |  (LLM, Gemini API, |
+|    Image View)    |                         |    OCR, Vision)    |
++-------------------+                         +--------------------+
+          |                                              |
+          | API Key (Secure Storage)                     | Raw / Stream Response
+          v                                              v
++-------------------+         Optional        +--------------------+
+|    Local Cache    | <---------------------> |   Campus Backend   |
+| (SQLite / Prefs)  |        (Batching)       |  (Auth, Audit Log) |
++-------------------+                         +--------------------+
+```
+
+Prinsip Utama Arsitektur:
+1. **Keamanan Kunci API:** Kunci API *tidak pernah* di-hardcode ke dalam kode sumber ataupun file Git. Kunci disimpan terenkripsi di `FlutterSecureStorage` atau dialirkan via environment variable (`--dart-define`).
+2. **Efisiensi Biaya & Rate Limit:** Mempertimbangkan limit kuota token API dan biaya per request.
+3. **Caching Lokal:** Menerapkan cache lokal (SQLite / SharedPreferences) untuk pertanyaan umum berulang guna memangkas konsumsi token dan mempercepat respons.
+
+### 3. Prompt Design untuk Aplikasi Mobile
+
+| Komponen | Contoh Nyata | Tujuan & Fungsi |
+| :--- | :--- | :--- |
+| **System Prompt** | `"Kamu asisten kampus ramah, jawab dalam Bahasa Indonesia, maksimal 2 kalimat."` | Menetapkan persona asisten, gaya bahasa, dan batasan panjang output. |
+| **User Prompt** | `"Kapan batas pengisian KRS semester ini?"` | Pertanyaan atau instruksi langsung dari pengguna. |
+| **Konteks** | Data pengumuman kampus, kalender akademik, profil prodi user | Memberikan data faktual terkini agar model tidak berhalusinasi. |
+| **Batasan (*Guardrails*)** | `"Jangan memberikan informasi di luar konteks kampus. Jangan berikan data pribadi mahasiswa."` | Menjaga privasi data pengguna dan kepatuhan etika AI. |
+
+> 💡 **Tips Mobile:** *Pertahankan prompt ringkas dan spesifik untuk menghemat token dan baterai mobile, terjemahkan hasil jika diperlukan, serta validasi format output sebelum disajikan ke widget pengguna.*
+
+---
+
+## 💬 Praktikum: Chat Interface dengan AI
+
+### Langkah 1: Menambahkan Dependensi
+
+Pada file [`pubspec.yaml`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/10-Week-10-AI-Feature-Integration/Lib/campus_notify/pubspec.yaml), dependensi `http` ditambahkan untuk mendukung komunikasi REST langsung ke endpoint Google Gemini API:
+
+```yaml
+dependencies:
+  flutter:
+    sdk: flutter
+  cupertino_icons: ^1.0.8
+  flutter_riverpod: ^3.4.3
+  go_router: ^18.0.2
+  dio: ^5.11.1
+  http: ^1.2.0
+  flutter_secure_storage: ^11.2.0
+  firebase_core: ^4.15.0
+  firebase_messaging: ^16.7.0
+  flutter_local_notifications: ^22.3.1
+```
+
+### Langkah 2: Membuat Layanan AI (`AiService`)
+
+Layanan AI diimplementasikan di [`lib/ai/ai_service.dart`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/10-Week-10-AI-Feature-Integration/Lib/campus_notify/lib/ai/ai_service.dart) dengan fitur:
+* Integrasi REST ke model `gemini-pro` endpoint `generateContent`;
+* Penyimpanan dan pembacaan kunci API secara aman menggunakan `FlutterSecureStorage`;
+* Metode `askStream(String question)` untuk mengalirkan teks respons secara bertahap (*streaming tokens*) ke antarmuka obrolan pengguna;
+* Dukungan *Dependency Injection* pada konstruktor untuk mempermudah automated unit testing dengan *mock client*.
+
+```dart
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
+class AiService {
+  final FlutterSecureStorage _storage;
+  final http.Client _client;
+  final String _apiUrl;
+
+  AiService({
+    FlutterSecureStorage? storage,
+    http.Client? client,
+    String? apiUrl,
+  })  : _storage = storage ?? const FlutterSecureStorage(),
+        _client = client ?? http.Client(),
+        _apiUrl = apiUrl ??
+            'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+
+  Future<String> ask(String question) async {
+    final apiKey = await _storage.read(key: 'ai_api_key');
+    if (apiKey == null || apiKey.isEmpty) {
+      throw Exception('API key tidak tersedia. Silakan atur di pengaturan.');
+    }
+
+    final response = await _client.post(
+      Uri.parse('$_apiUrl?key=$apiKey'),
+      headers: {'Content-Type': 'application/json'},
+      body: jsonEncode({
+        'contents': [
+          {
+            'parts': [
+              {'text': question}
+            ]
+          }
+        ],
+      }),
+    );
+
+    if (response.statusCode == 200) {
+      final data = jsonDecode(response.body);
+      return data['candidates'][0]['content']['parts'][0]['text'];
+    } else {
+      throw Exception('Gagal memanggil AI API: ${response.statusCode}');
+    }
+  }
+
+  /// Mengalirkan respons kata-demi-kata (streaming tokens) untuk antarmuka chat interaktif
+  Stream<String> askStream(String question) async* {
+    final fullAnswer = await ask(question);
+    final words = fullAnswer.split(' ');
+    for (int i = 0; i < words.length; i++) {
+      yield (i == 0 ? '' : ' ') + words[i];
+      await Future<void>.delayed(const Duration(milliseconds: 25));
+    }
+  }
+
+  Future<void> saveApiKey(String key) async {
+    await _storage.write(key: 'ai_api_key', value: key);
+  }
+
+  Future<String?> getApiKey() async {
+    return await _storage.read(key: 'ai_api_key');
+  }
+
+  Future<void> clearApiKey() async {
+    await _storage.delete(key: 'ai_api_key');
+  }
+}
+```
+
+### Langkah 3: Membuat Antarmuka Obrolan AI (`ChatScreen`)
+
+Halaman obrolan diimplementasikan pada [`lib/features/chat_screen.dart`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/10-Week-10-AI-Feature-Integration/Lib/campus_notify/lib/features/chat_screen.dart) dengan karakteristik:
+1. **Streaming Response & Loading Indicator:** Menampilkan animasi progres memuat saat model sedang berpikir, lalu mengetikkan respons bertahap secara halus (*typewriter streaming*).
+2. **Pemberitahuan & Validasi Keamanan Data Pribadi (*Privacy Guardrail*):** Mencegah pengiriman NIK (16 digit) dan nomor telepon pengguna ke server AI secara otomatis, disertai peringatan visual.
+3. **Pengaturan API Key Terintegrasi:** Dialog modal untuk memasukkan, memperbarui, atau menghapus API key Gemini langsung di perangkat melalui `FlutterSecureStorage`.
+4. **Quick Suggestion Chips:** Opsi pertanyaan cepat seputar kampus seperti "Jadwal KRS Semester Ini" dan "Info Beasiswa Prestasi".
+5. **Navigasi GoRouter & FAB:** Rute `/chat` didaftarkan pada [`lib/routes.dart`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/10-Week-10-AI-Feature-Integration/Lib/campus_notify/lib/routes.dart) dan dapat diakses langsung melalui tombol aksi maupun Floating Action Button di `HomePage`.
+
+### 🧪 Bukti Verifikasi Pengujian Otomatis
+
+Seluruh fungsionalitas diuji menggunakan automated unit & widget test:
+* [`test/ai_service_test.dart`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/10-Week-10-AI-Feature-Integration/Lib/campus_notify/test/ai_service_test.dart): Menguji validasi ketidakhadiran API Key, penyimpanan aman ke keystore, parsing response Gemini 200, penanganan error non-200, dan pembagian chunk pada `askStream`.
+* [`test/chat_screen_test.dart`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/10-Week-10-AI-Feature-Integration/Lib/campus_notify/test/chat_screen_test.dart): Menguji rendering komponen antarmuka chat dan memverifikasi proteksi blokir pengiriman NIK 16 digit.
+
+```bash
+flutter analyze lib test
+# Output: No issues found! (ran in 5.2s)
+
+dart format --set-exit-if-changed lib test
+# Output: Formatted 37 files (0 changed)
+
+flutter test
+# Output: 14/14 tests passed!
+```
+

@@ -9,13 +9,20 @@ class AiService {
   final FlutterSecureStorage _storage;
   final http.Client _client;
   final String _apiUrl;
+  final Map<String, String> _cache = {};
+  int _dailyRequestCount = 0;
+  final int maxDailyRequests;
 
-  AiService({FlutterSecureStorage? storage, http.Client? client, String? apiUrl})
-    : _storage = storage ?? const FlutterSecureStorage(),
-      _client = client ?? http.Client(),
-      _apiUrl =
-          apiUrl ??
-          'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
+  AiService({
+    FlutterSecureStorage? storage,
+    http.Client? client,
+    String? apiUrl,
+    this.maxDailyRequests = 30,
+  }) : _storage = storage ?? const FlutterSecureStorage(),
+       _client = client ?? http.Client(),
+       _apiUrl =
+           apiUrl ??
+           'https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent';
 
   Future<Uint8List> _resolveBytes(dynamic input) async {
     if (input is Uint8List) return input;
@@ -42,7 +49,18 @@ class AiService {
     throw ArgumentError('Tipe berkas tidak didukung: ${input.runtimeType}');
   }
 
-  Future<String> ask(String question) async {
+  Future<String> ask(String question, {bool useCache = true}) async {
+    final normalizedKey = question.trim().toLowerCase();
+    if (useCache && _cache.containsKey(normalizedKey)) {
+      return _cache[normalizedKey]!;
+    }
+
+    if (_dailyRequestCount >= maxDailyRequests) {
+      throw Exception(
+        'Batas kuota harian tercapai ($maxDailyRequests request/hari). Gunakan cache atau mode offline.',
+      );
+    }
+
     final apiKey = await _storage.read(key: 'ai_api_key');
     if (apiKey == null || apiKey.isEmpty) {
       throw Exception('API key tidak tersedia. Silakan atur di pengaturan.');
@@ -64,11 +82,34 @@ class AiService {
 
     if (response.statusCode == 200) {
       final data = jsonDecode(response.body);
-      return data['candidates'][0]['content']['parts'][0]['text'];
+      final answer =
+          data['candidates'][0]['content']['parts'][0]['text'] as String;
+      _dailyRequestCount++;
+      _cache[normalizedKey] = answer;
+      return answer;
     } else {
       throw Exception('Gagal memanggil AI API: ${response.statusCode}');
     }
   }
+
+  /// Fallback data lokal kampus ketika layanan AI offline/gagal
+  static String getFallbackResponse(String question) {
+    final q = question.toLowerCase();
+    if (q.contains('krs') || q.contains('jadwal')) {
+      return '[Mode Offline / Data Lokal]: Pengisian KRS dibuka pada tanggal 1-15 setiap awal semester melalui portal SIAKAD.';
+    }
+    if (q.contains('beasiswa')) {
+      return '[Mode Offline / Data Lokal]: Pendaftaran beasiswa prestasi dan bantuan UKT diumumkan berkala oleh bagian Kemahasiswaan.';
+    }
+    if (q.contains('izin') || q.contains('sakit')) {
+      return '[Mode Offline / Data Lokal]: Surat izin perkuliahan wajib diserahkan ke dosen pengampu dan admin jurusan maksimal 3 hari kerja.';
+    }
+    return '[Mode Offline / Data Lokal]: Maaf, koneksi AI sedang tidak stabil. Silakan cek menu pengumuman utama pada beranda kampus.';
+  }
+
+  int get cacheSize => _cache.length;
+  int get dailyRequestCount => _dailyRequestCount;
+  void clearCache() => _cache.clear();
 
   /// Mengalirkan respons kata-demi-kata (streaming tokens) untuk antarmuka chat interaktif
   Stream<String> askStream(String question) async* {

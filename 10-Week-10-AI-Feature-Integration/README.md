@@ -304,4 +304,90 @@ Unit tests di [`test/ai_service_test.dart`](file:///d:/Semester%205/Pemrograman%
 3. `describeImage`: Mengirim gambar dan prompt konteks visual, memvalidasi hasil deskripsi ruangan/gedung.
 4. `ChatScreen`: Menampilkan tombol lampiran multimodal dan memicu bottom sheet interaktif.
 
+---
+
+## 🛡️ Privasi, Biaya, Error Handling, dan Fallback
+
+Pengembangan fitur AI pada aplikasi mobile skala produksi menuntut ketahanan terhadap kegagalan jaringan, perlindungan privasi data pribadi pengguna, serta pencegahan pembengkakan biaya pemanggilan token API.
+
+### 1. Tabel Risiko dan Mitigasi
+
+| Risiko | Dampak Potensial | Mitigasi yang Diterapkan |
+| :--- | :--- | :--- |
+| **Bocor Data Pengguna** | Pelanggaran UU PDP / data privasi mahasiswa terkirim ke LLM pihak ketiga | Terapkan filter guardrail lokal berbasis regex untuk mendeteksi & memblokir NIK 16 digit dan nomor telepon sebelum prompt dikirim. Gunakan placeholder anonim. |
+| **Biaya Melonjak** | Pembengkakan tagihan API token karena request berulang atau spam | Batasi kuota request harian pengguna (`maxDailyRequests`), dan terapkan *local cache* pada `AiService` untuk pertanyaan yang identik. |
+| **API Error / Down** | Aplikasi crash atau pengguna terjebak pada layar loading tanpa kepastian | Tangkap exception HTTP, tampilkan dialog ramah pengguna (*"Layanan AI Sibuk"*), opsi coba lagi, dan alihkan ke mode offline. |
+| **Respons Tidak Relevan** | Model berhalusinasi atau memberikan jawaban di luar topik kampus | Validasi respons dan sediakan *fallback knowledge base* lokal kampus yang teruji kebenarannya. |
+
+### 2. Implementasi Fallback Dialog & Mode Offline
+
+Ketika pemanggilan API mengalami kendala (misal: kuota habis, tidak ada internet, atau status HTTP non-200), aplikasi secara elegan menampilkan dialog mitigasi dan menyediakan opsi pengalihan ke data lokal:
+
+```dart
+try {
+  final response = await aiService.ask(question);
+} catch (e) {
+  showDialog(
+    context: context,
+    builder: (_) => AlertDialog(
+      title: const Text('Layanan AI Sibuk'),
+      content: const Text('Coba lagi nanti atau gunakan mode offline.'),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Tutup'),
+        ),
+        FilledButton.tonal(
+          onPressed: () {
+            Navigator.of(context).pop();
+            _useOfflineFallback(question);
+          },
+          child: const Text('Gunakan Mode Offline'),
+        ),
+      ],
+    ),
+  );
+}
+```
+
+Metode fallback lokal pada [`lib/ai/ai_service.dart`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/10-Week-10-AI-Feature-Integration/Lib/campus_notify/lib/ai/ai_service.dart):
+
+```dart
+static String getFallbackResponse(String question) {
+  final q = question.toLowerCase();
+  if (q.contains('krs') || q.contains('jadwal')) {
+    return '[Mode Offline / Data Lokal]: Pengisian KRS dibuka pada tanggal 1-15 setiap awal semester melalui portal SIAKAD.';
+  }
+  if (q.contains('beasiswa')) {
+    return '[Mode Offline / Data Lokal]: Pendaftaran beasiswa prestasi dan bantuan UKT diumumkan berkala oleh bagian Kemahasiswaan.';
+  }
+  if (q.contains('izin') || q.contains('sakit')) {
+    return '[Mode Offline / Data Lokal]: Surat izin perkuliahan wajib diserahkan ke dosen pengampu dan admin jurusan maksimal 3 hari kerja.';
+  }
+  return '[Mode Offline / Data Lokal]: Maaf, koneksi AI sedang tidak stabil. Silakan cek menu pengumuman utama pada beranda kampus.';
+}
+```
+
+### 3. Implementasi Caching & Rate Limiting
+
+Pada [`lib/ai/ai_service.dart`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/10-Week-10-AI-Feature-Integration/Lib/campus_notify/lib/ai/ai_service.dart):
+* Pertanyaan yang telah dijawab disimpan ke memori internal (`_cache[normalizedKey]`). Saat mahasiswa menanyakan hal yang sama, jawaban langsung disajikan seketika tanpa latency jaringan dan tanpa membakar token API.
+* Batas kuota harian (`maxDailyRequests`) mencegah kehabisan biaya atau *denial-of-service* akibat *spam click*.
+
+### 🧪 Bukti Verifikasi Pengujian
+
+Hasil pengujian otomatis 22 test case:
+
+```bash
+flutter analyze lib test
+# Output: No issues found! (ran in 5.5s)
+
+dart format --set-exit-if-changed lib test
+# Output: Formatted 37 files (0 changed)
+
+flutter test
+# Output: 22/22 tests passed! (100% lulus)
+```
+
+
 

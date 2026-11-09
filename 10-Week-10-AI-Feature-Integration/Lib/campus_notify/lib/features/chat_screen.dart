@@ -166,16 +166,7 @@ class _ChatScreenState extends State<ChatScreen> {
           }
         },
         onError: (error) {
-          if (mounted) {
-            setState(() {
-              _messages[aiIndex] = _messages[aiIndex].copyWith(
-                text: 'Terjadi kesalahan: ${error.toString()}',
-                isStreaming: false,
-              );
-              _isLoading = false;
-            });
-            _scrollToBottom();
-          }
+          _handleAiError(error, trimmedText);
         },
         onDone: () {
           if (mounted) {
@@ -191,18 +182,56 @@ class _ChatScreenState extends State<ChatScreen> {
         cancelOnError: true,
       );
     } catch (e) {
-      if (mounted) {
-        setState(() {
-          final aiIndex = _messages.length - 1;
-          _messages[aiIndex] = _messages[aiIndex].copyWith(
-            text: 'Gagal terhubung ke AI API: $e',
-            isStreaming: false,
-          );
-          _isLoading = false;
-        });
-        _scrollToBottom();
-      }
+      _handleAiError(e, trimmedText);
     }
+  }
+
+  /// Menangani error API dengan Fallback Dialog dan Mode Offline (Modul Bagian 5)
+  void _handleAiError(dynamic error, String originalQuestion) {
+    if (!mounted) return;
+    final aiIndex = _messages.length - 1;
+    setState(() {
+      _messages[aiIndex] = _messages[aiIndex].copyWith(
+        text: 'Layanan AI sedang tidak tersedia (${error.toString()}).',
+        isStreaming: false,
+      );
+      _isLoading = false;
+    });
+    _scrollToBottom();
+
+    showDialog<void>(
+      context: context,
+      builder: (_) => AlertDialog(
+        title: const Text('Layanan AI Sibuk'),
+        content: const Text('Coba lagi nanti atau gunakan mode offline.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Tutup'),
+          ),
+          FilledButton.tonal(
+            onPressed: () {
+              Navigator.of(context).pop();
+              _useOfflineFallback(originalQuestion);
+            },
+            child: const Text('Gunakan Mode Offline'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _useOfflineFallback(String question) {
+    if (!mounted) return;
+    final fallbackAnswer = AiService.getFallbackResponse(question);
+    final aiIndex = _messages.length - 1;
+    setState(() {
+      _messages[aiIndex] = _messages[aiIndex].copyWith(
+        text: fallbackAnswer,
+        isStreaming: false,
+      );
+    });
+    _scrollToBottom();
   }
 
   Future<void> _showApiKeyDialog() async {

@@ -76,5 +76,36 @@ void main() {
       expect(find.text('Speech-to-Text (STT)'), findsOneWidget);
       expect(find.text('Image Understanding'), findsOneWidget);
     });
+
+    testWidgets(
+      'Menampilkan dialog Layanan AI Sibuk dan opsi Mode Offline saat API gagal',
+      (tester) async {
+        // fakeStorage belum memiliki API key, sehingga akan melempar error saat kirim
+        await tester.pumpWidget(
+          MaterialApp(home: ChatScreen(aiService: aiService)),
+        );
+        await tester.pumpAndSettle();
+
+        final textFieldFinder = find.byType(TextField);
+        await tester.enterText(textFieldFinder, 'Kapan jadwal KRS?');
+        await tester.tap(find.byIcon(Icons.send_rounded));
+        await tester.pumpAndSettle();
+
+        // Dialog Layanan AI Sibuk harus muncul
+        expect(find.text('Layanan AI Sibuk'), findsOneWidget);
+        expect(
+          find.text('Coba lagi nanti atau gunakan mode offline.'),
+          findsOneWidget,
+        );
+
+        // Pengguna menekan tombol "Gunakan Mode Offline"
+        await tester.tap(find.text('Gunakan Mode Offline'));
+        await tester.pumpAndSettle();
+
+        // Dialog tertutup dan pesan lokal offline muncul di chat
+        expect(find.text('Layanan AI Sibuk'), findsNothing);
+        expect(find.textContaining('SIAKAD'), findsOneWidget);
+      },
+    );
   });
 }

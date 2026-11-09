@@ -266,5 +266,101 @@ void main() {
         'Gambar menunjukkan suasana perpustakaan lantai 3 Polinema.',
       );
     });
+
+    test(
+      'Cache lokal menghemat panggilan API untuk pertanyaan yang sama',
+      () async {
+        await fakeStorage.write(key: 'ai_api_key', value: 'valid-test-key');
+
+        int networkCalls = 0;
+        final mockClient = MockClient((request) async {
+          networkCalls++;
+          final fakeResponse = {
+            'candidates': [
+              {
+                'content': {
+                  'parts': [
+                    {'text': 'Jadwal KRS tanggal 1-15 November.'},
+                  ],
+                },
+              },
+            ],
+          };
+          return http.Response(jsonEncode(fakeResponse), 200);
+        });
+
+        final aiService = AiService(storage: fakeStorage, client: mockClient);
+
+        // Panggilan pertama (memanggil network)
+        final res1 = await aiService.ask('Jadwal KRS');
+        expect(res1, 'Jadwal KRS tanggal 1-15 November.');
+        expect(networkCalls, 1);
+        expect(aiService.cacheSize, 1);
+
+        // Panggilan kedua pertanyaan sama (harus dilayani dari cache)
+        final res2 = await aiService.ask('jadwal krs');
+        expect(res2, 'Jadwal KRS tanggal 1-15 November.');
+        expect(networkCalls, 1); // Tidak ada tambahan panggilan HTTP!
+      },
+    );
+
+    test('Mencegah pembengkakan biaya dengan membatasi kuota harian', () async {
+      await fakeStorage.write(key: 'ai_api_key', value: 'valid-test-key');
+
+      final mockClient = MockClient((request) async {
+        return http.Response(
+          jsonEncode({
+            'candidates': [
+              {
+                'content': {
+                  'parts': [
+                    {'text': 'Jawaban valid'},
+                  ],
+                },
+              },
+            ],
+          }),
+          200,
+        );
+      });
+
+      // Set batas kuota kecil: maks 2 request
+      final aiService = AiService(
+        storage: fakeStorage,
+        client: mockClient,
+        maxDailyRequests: 2,
+      );
+
+      await aiService.ask('Pertanyaan 1', useCache: false);
+      await aiService.ask('Pertanyaan 2', useCache: false);
+
+      // Panggilan ke-3 harus dilempar exception batas kuota
+      expect(
+        () => aiService.ask('Pertanyaan 3', useCache: false),
+        throwsA(
+          predicate(
+            (e) =>
+                e is Exception &&
+                e.toString().contains('Batas kuota harian tercapai'),
+          ),
+        ),
+      );
+    });
+
+    test(
+      'getFallbackResponse mengembalikan jawaban offline kampus yang akurat',
+      () {
+        final krsFallback = AiService.getFallbackResponse('kapan jadwal krs?');
+        expect(krsFallback, contains('SIAKAD'));
+
+        final beasiswaFallback = AiService.getFallbackResponse('info beasiswa');
+        expect(beasiswaFallback, contains('Kemahasiswaan'));
+
+        final generalFallback = AiService.getFallbackResponse(
+          'pertanyaan acak lainnya',
+        );
+        expect(generalFallback, contains('Mode Offline'));
+      },
+    );
   });
 }

@@ -12,8 +12,6 @@ class HomePage extends ConsumerWidget {
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
-    final maskedToken = ref.watch(maskedFcmTokenProvider);
-
     return Scaffold(
       appBar: AppBar(
         title: const Text('Beranda Kampus'),
@@ -60,13 +58,27 @@ class HomePage extends ConsumerWidget {
                         style: TextStyle(fontWeight: FontWeight.bold),
                       ),
                       const SizedBox(height: 4),
-                      Text('Token (12 char): $maskedToken'),
+                      // Optimasi Minggu 11: Isolasi Consumer agar perubahan token tidak merebuild seluruh HomePage
+                      Consumer(
+                        builder: (context, ref, _) {
+                          final maskedToken = ref.watch(maskedFcmTokenProvider);
+                          return Text('Token (12 char): $maskedToken');
+                        },
+                      ),
                       const Text('Topik: pengumuman-kampus'),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 24),
+              ElevatedButton.icon(
+                icon: const Icon(Icons.list_alt),
+                label: const Text('Daftar Pengumuman (Infinite Scroll)'),
+                onPressed: () {
+                  context.push(AppRoutes.announcementsList);
+                },
+              ),
+              const SizedBox(height: 8),
               ElevatedButton.icon(
                 icon: const Icon(Icons.message),
                 label: const Text('Cek Pengumuman BEM (ID: 99)'),

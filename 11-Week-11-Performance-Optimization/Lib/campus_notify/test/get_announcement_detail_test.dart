@@ -25,6 +25,21 @@ class FakeAnnouncementRepository implements AnnouncementRepository {
     }
     return (announcement: announcement, failure: null);
   }
+
+  @override
+  Future<({List<Announcement> announcements, Failure? failure})>
+  fetchAnnouncementsPage(int page, {int limit = 5}) async {
+    if (fail) {
+      return (
+        announcements: <Announcement>[],
+        failure: const LocalFailure('Simulasi error paginasi'),
+      );
+    }
+    return (
+      announcements: announcement != null ? [announcement!] : <Announcement>[],
+      failure: null,
+    );
+  }
 }
 
 void main() {

@@ -526,7 +526,7 @@ class _ChatScreenState extends State<ChatScreen> {
                 itemCount: _messages.length,
                 itemBuilder: (context, index) {
                   final msg = _messages[index];
-                  return _buildMessageBubble(msg);
+                  return ChatMessageBubble(message: msg);
                 },
               ),
             ),
@@ -613,68 +613,80 @@ class _ChatScreenState extends State<ChatScreen> {
       ),
     );
   }
+}
 
-  Widget _buildMessageBubble(ChatMessage msg) {
+/// Widget bubble chat terpisah yang diisolasi dengan RepaintBoundary (Optimasi Minggu 11)
+class ChatMessageBubble extends StatelessWidget {
+  final ChatMessage message;
+
+  const ChatMessageBubble({super.key, required this.message});
+
+  @override
+  Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isUser = msg.isUser;
+    final isUser = message.isUser;
 
-    return Align(
-      alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
-      child: Container(
-        margin: const EdgeInsets.symmetric(vertical: 4),
-        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
-        constraints: BoxConstraints(
-          maxWidth: MediaQuery.of(context).size.width * 0.78,
-        ),
-        decoration: BoxDecoration(
-          color: isUser
-              ? theme.colorScheme.primaryContainer
-              : theme.colorScheme.surfaceContainerHighest,
-          borderRadius: BorderRadius.only(
-            topLeft: const Radius.circular(14),
-            topRight: const Radius.circular(14),
-            bottomLeft: Radius.circular(isUser ? 14 : 2),
-            bottomRight: Radius.circular(isUser ? 2 : 14),
+    return RepaintBoundary(
+      child: Align(
+        alignment: isUser ? Alignment.centerRight : Alignment.centerLeft,
+        child: Container(
+          margin: const EdgeInsets.symmetric(vertical: 4),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+          constraints: BoxConstraints(
+            maxWidth: MediaQuery.of(context).size.width * 0.78,
           ),
-        ),
-        child: Column(
-          crossAxisAlignment: isUser
-              ? CrossAxisAlignment.end
-              : CrossAxisAlignment.start,
-          children: [
-            Row(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  isUser ? Icons.person : Icons.smart_toy_outlined,
-                  size: 14,
-                  color: isUser
-                      ? theme.colorScheme.onPrimaryContainer
-                      : theme.colorScheme.primary,
-                ),
-                const SizedBox(width: 4),
-                Text(
-                  isUser ? 'Anda' : 'Campus Assistant',
-                  style: theme.textTheme.labelSmall?.copyWith(
-                    fontWeight: FontWeight.bold,
+          decoration: BoxDecoration(
+            color: isUser
+                ? theme.colorScheme.primaryContainer
+                : theme.colorScheme.surfaceContainerHighest,
+            borderRadius: BorderRadius.only(
+              topLeft: const Radius.circular(14),
+              topRight: const Radius.circular(14),
+              bottomLeft: Radius.circular(isUser ? 14 : 2),
+              bottomRight: Radius.circular(isUser ? 2 : 14),
+            ),
+          ),
+          child: Column(
+            crossAxisAlignment: isUser
+                ? CrossAxisAlignment.end
+                : CrossAxisAlignment.start,
+            children: [
+              Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(
+                    isUser ? Icons.person : Icons.smart_toy_outlined,
+                    size: 14,
                     color: isUser
                         ? theme.colorScheme.onPrimaryContainer
                         : theme.colorScheme.primary,
                   ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 4),
-            Text(
-              msg.text.isEmpty && msg.isStreaming ? '...' : msg.text,
-              style: TextStyle(
-                fontSize: 14,
-                color: isUser
-                    ? theme.colorScheme.onPrimaryContainer
-                    : theme.colorScheme.onSurface,
+                  const SizedBox(width: 4),
+                  Text(
+                    isUser ? 'Anda' : 'Campus Assistant',
+                    style: theme.textTheme.labelSmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: isUser
+                          ? theme.colorScheme.onPrimaryContainer
+                          : theme.colorScheme.primary,
+                    ),
+                  ),
+                ],
               ),
-            ),
-          ],
+              const SizedBox(height: 4),
+              Text(
+                message.text.isEmpty && message.isStreaming
+                    ? '...'
+                    : message.text,
+                style: TextStyle(
+                  fontSize: 14,
+                  color: isUser
+                      ? theme.colorScheme.onPrimaryContainer
+                      : theme.colorScheme.onSurface,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );

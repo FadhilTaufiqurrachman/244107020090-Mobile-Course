@@ -3,6 +3,7 @@ import 'core/format.dart';
 class AppRoutes {
   static const String home = '/';
   static const String login = '/login';
+  static const String announcementsList = '/pengumuman';
   static const String announcement = '/pengumuman/:id';
   static const String chat = '/chat';
 

@@ -8,6 +8,7 @@ import 'features/auth/presentation/providers/auth_providers.dart';
 import 'features/auth/presentation/pages/login_page.dart';
 import 'features/announcements/presentation/pages/home_page.dart';
 import 'features/announcements/presentation/pages/announcement_page.dart';
+import 'features/announcements/presentation/pages/paginated_announcements_page.dart';
 import 'features/chat_screen.dart';
 import 'messaging/push_service.dart';
 
@@ -76,6 +77,10 @@ final goRouterProvider = Provider<GoRouter>((ref) {
       GoRoute(
         path: AppRoutes.home,
         builder: (context, state) => const HomePage(),
+      ),
+      GoRoute(
+        path: AppRoutes.announcementsList,
+        builder: (context, state) => const PaginatedAnnouncementsPage(),
       ),
       GoRoute(
         path: AppRoutes.announcement,

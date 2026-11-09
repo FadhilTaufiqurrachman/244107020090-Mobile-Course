@@ -433,6 +433,21 @@ flutter test
 
 ---
 
+## 🖼️ Dokumentasi Screenshots
+
+Seluruh 6 screenshot dokumentasi fitur AI dan pengujian mesin yang tersedia di folder `Screenshots/` dicantumkan di bawah:
+
+| Nama Tampilan / Pengujian | Tangkapan Layar |
+| :--- | :--- |
+| **Halaman Beranda dengan Integrasi AI**<br>Menampilkan tombol aksi robot pada AppBar dan Floating Action Button *"Tanya AI"* pada antarmuka utama Campus Notify. | ![Halaman Beranda AI](./Screenshots/Home-Page-AI.png) |
+| **Antarmuka Chat Assistant AI (Streaming Response)**<br>Menampilkan banner privasi data, dialog API key, gelembung obrolan interaktif dengan streaming teks, dan *quick prompt chips*. | ![Chat Screen Overview](./Screenshots/Chat-Screen-Overview.png) |
+| **Fitur Multimodal AI (Modal Bottom Sheet)**<br>Menu aksi cerdas untuk OCR Dokumen/KTM, Speech-to-Text (STT transkripsi audio), dan Image Understanding. | ![Multimodal Feature Sheet](./Screenshots/Multimodal-Feature-Sheet.png) |
+| **Peringatan Privasi (Guardrail Blokir NIK & Telepon)**<br>Sistem otomatis memblokir pengiriman NIK 16 digit mahasiswa dan menampilkan peringatan keamanan visual. | ![Privacy Guardrail Blocked](./Screenshots/Privacy-Guardrail-Blocked.png) |
+| **Dialog Fallback & Mode Offline**<br>Dialog *"Layanan AI Sibuk"* yang memitigasi kegagalan koneksi API dan mengalihkan mahasiswa ke basis data kampus lokal. | ![Fallback Dialog Offline](./Screenshots/Fallback-Dialog-Offline.png) |
+| **Hasil Verifikasi Mesin Hijau (Analyze & Test)**<br>Bukti eksekusi terminal: `flutter analyze` 0 issue dan `flutter test` 22/22 tes otomatis lulus 100%. | ![Hasil Analyze dan Test](./Screenshots/Flutter-Analyze-Test-Result.png) |
+
+---
+
 ## 📚 Referensi Pendukung
 
 * [Slide Week 10: Integrasi Fitur AI](https://docs.flutter.dev/)

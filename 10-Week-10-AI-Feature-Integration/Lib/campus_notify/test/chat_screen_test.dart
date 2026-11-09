@@ -56,5 +56,25 @@ void main() {
         );
       },
     );
+
+    testWidgets('Membuka bottom sheet multimodal AI dan menampilkan opsi OCR', (
+      tester,
+    ) async {
+      await tester.pumpWidget(
+        MaterialApp(home: ChatScreen(aiService: aiService)),
+      );
+      await tester.pumpAndSettle();
+
+      final attachButton = find.byIcon(Icons.add_photo_alternate_outlined);
+      expect(attachButton, findsOneWidget);
+
+      await tester.tap(attachButton);
+      await tester.pumpAndSettle();
+
+      expect(find.text('Fitur Multimodal AI'), findsOneWidget);
+      expect(find.text('OCR Dokumen / KTM'), findsOneWidget);
+      expect(find.text('Speech-to-Text (STT)'), findsOneWidget);
+      expect(find.text('Image Understanding'), findsOneWidget);
+    });
   });
 }

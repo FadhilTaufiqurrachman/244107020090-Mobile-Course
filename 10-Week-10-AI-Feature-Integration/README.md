@@ -229,12 +229,79 @@ Seluruh fungsionalitas diuji menggunakan automated unit & widget test:
 
 ```bash
 flutter analyze lib test
-# Output: No issues found! (ran in 5.2s)
+# Output: No issues found! (ran in 5.3s)
 
 dart format --set-exit-if-changed lib test
 # Output: Formatted 37 files (0 changed)
 
 flutter test
-# Output: 14/14 tests passed!
+# Output: 18/18 tests passed!
 ```
+
+---
+
+## 👁️🎙️ OCR, Speech-to-Text, dan Image Understanding (Multimodal AI)
+
+Modul ini memperluas fungsionalitas cerdas aplikasi melampaui teks biasa ke kemampuan multimodal: memproses gambar, audio, dan dokumen.
+
+### 1. Konsep & Arsitektur Multimodal
+
+| Fitur | Library / Pipeline | Kasus Penggunaan Mobile |
+| :--- | :--- | :--- |
+| **OCR (Optical Character Recognition)** | `image_picker` + Gemini Vision API | Ekstraksi teks dari foto Kartu Tanda Mahasiswa (KTM), kuitansi pembayaran UKT, dokumen akademik, poster pengumuman kampus. |
+| **Speech-to-Text (STT)** | `record` / `just_audio` + Gemini Audio / STT API | Perekaman suara mahasiswa untuk input cepat pertanyaan chat atau aksesibilitas disabilitas visual/motorik. |
+| **Image Understanding** | Gemini Multimodal Prompting (`gemini-1.5-flash`) | Analisis gambar denah gedung kampus, identifikasi fasilitas lab, atau penjelasan visual diagram/infografis. |
+
+### 2. Implementasi pada Layanan AI (`AiService`)
+
+Kode diimplementasikan pada [`lib/ai/ai_service.dart`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/10-Week-10-AI-Feature-Integration/Lib/campus_notify/lib/ai/ai_service.dart) dengan fleksibilitas resolusi berkas (`dynamic imageFile` / `dynamic audioFile` yang mendukung `Uint8List`, `List<int>`, `File`, `String` base64/path):
+
+```dart
+// 1. Ekstraksi OCR Teks Dokumen
+final result = await aiService.recognizeText(imageFile);
+
+// 2. Konversi Suara Rekaman ke Teks
+final text = await aiService.speechToText(audioFile);
+
+// 3. Analisis Visual Gambar / Poster Kampus
+final description = await aiService.describeImage(imageFile, prompt: 'Jelaskan poster kegiatan ini');
+```
+
+Struktur payload multimodal ke Google Gemini REST API:
+
+```json
+{
+  "contents": [
+    {
+      "parts": [
+        { "text": "Lakukan OCR: ekstrak seluruh teks yang tertulis pada gambar ini secara akurat." },
+        {
+          "inline_data": {
+            "mime_type": "image/jpeg",
+            "data": "<BASE64_ENCODED_IMAGE>"
+          }
+        }
+      ]
+    }
+  ]
+}
+```
+
+### 3. Integrasi UI Multimodal pada `ChatScreen`
+
+Pada [`lib/features/chat_screen.dart`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/10-Week-10-AI-Feature-Integration/Lib/campus_notify/lib/features/chat_screen.dart):
+* Menambahkan tombol aksi `add_photo_alternate_outlined` di bilah input obrolan.
+* Membuka *Modal Bottom Sheet* dengan 3 opsi interaktif:
+  1. **OCR Dokumen / KTM:** Mengekstrak teks dari foto dan langsung menyalin hasilnya ke kolom teks input pengguna;
+  2. **Speech-to-Text (STT):** Menstranskripsikan rekaman percakapan mahasiswa ke dalam bahasa Indonesia;
+  3. **Image Understanding:** Mengirim gambar fasilitas kampus ke model AI dan menambahkan ringkasan analisis langsung ke linimasa pesan obrolan.
+
+### 🧪 Bukti Verifikasi Pengujian Multimodal
+
+Unit tests di [`test/ai_service_test.dart`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/10-Week-10-AI-Feature-Integration/Lib/campus_notify/test/ai_service_test.dart) dan widget test di [`test/chat_screen_test.dart`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/10-Week-10-AI-Feature-Integration/Lib/campus_notify/test/chat_screen_test.dart) menguji:
+1. `recognizeText`: Mengonversi bytes gambar KTM ke `inline_data` base64 dan mem-parsing teks ekstraksi (termasuk NIM `244107020090`).
+2. `speechToText`: Mengonversi bytes audio rekaman ke `inline_data` base64 dan memvalidasi transkripsi teks bahasa Indonesia.
+3. `describeImage`: Mengirim gambar dan prompt konteks visual, memvalidasi hasil deskripsi ruangan/gedung.
+4. `ChatScreen`: Menampilkan tombol lampiran multimodal dan memicu bottom sheet interaktif.
+
 

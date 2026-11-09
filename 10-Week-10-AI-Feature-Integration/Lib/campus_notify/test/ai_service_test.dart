@@ -165,5 +165,106 @@ void main() {
       expect(chunks.length, 3);
       expect(chunks.join(''), 'Halo mahasiswa Polinema');
     });
+
+    test('recognizeText berhasil mengekstrak teks OCR dari gambar', () async {
+      await fakeStorage.write(key: 'ai_api_key', value: 'valid-test-key');
+
+      final mockClient = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        final parts = body['contents'][0]['parts'] as List<dynamic>;
+
+        expect(parts[0]['text'], contains('Lakukan OCR'));
+        expect(parts[1]['inline_data']['mime_type'], 'image/jpeg');
+
+        final fakeResponse = {
+          'candidates': [
+            {
+              'content': {
+                'parts': [
+                  {
+                    'text': 'KARTU TANDA MAHASISWA\nNAMA: FADHIL\nNIM: 244107020090',
+                  },
+                ],
+              },
+            },
+          ],
+        };
+        return http.Response(jsonEncode(fakeResponse), 200);
+      });
+
+      final aiService = AiService(storage: fakeStorage, client: mockClient);
+      final rawImageBytes = utf8.encode('dummy-ktm-image-bytes');
+      final result = await aiService.recognizeText(rawImageBytes);
+
+      expect(result, contains('244107020090'));
+      expect(result, contains('KARTU TANDA MAHASISWA'));
+    });
+
+    test('speechToText berhasil mengonversi audio ke teks', () async {
+      await fakeStorage.write(key: 'ai_api_key', value: 'valid-test-key');
+
+      final mockClient = MockClient((request) async {
+        final body = jsonDecode(request.body) as Map<String, dynamic>;
+        final parts = body['contents'][0]['parts'] as List<dynamic>;
+
+        expect(parts[0]['text'], contains('Transkripsikan'));
+        expect(parts[1]['inline_data']['mime_type'], 'audio/mp3');
+
+        final fakeResponse = {
+          'candidates': [
+            {
+              'content': {
+                'parts': [
+                  {
+                    'text':
+                        'Tolong jelaskan pengumuman beasiswa terbaru kampus',
+                  },
+                ],
+              },
+            },
+          ],
+        };
+        return http.Response(jsonEncode(fakeResponse), 200);
+      });
+
+      final aiService = AiService(storage: fakeStorage, client: mockClient);
+      final rawAudioBytes = utf8.encode('dummy-voice-recording');
+      final text = await aiService.speechToText(rawAudioBytes);
+
+      expect(text, 'Tolong jelaskan pengumuman beasiswa terbaru kampus');
+    });
+
+    test('describeImage berhasil memberikan deskripsi visual', () async {
+      await fakeStorage.write(key: 'ai_api_key', value: 'valid-test-key');
+
+      final mockClient = MockClient((request) async {
+        final fakeResponse = {
+          'candidates': [
+            {
+              'content': {
+                'parts': [
+                  {
+                    'text': 'Gambar menunjukkan suasana perpustakaan lantai 3 Polinema.',
+                  },
+                ],
+              },
+            },
+          ],
+        };
+        return http.Response(jsonEncode(fakeResponse), 200);
+      });
+
+      final aiService = AiService(storage: fakeStorage, client: mockClient);
+      final rawImageBytes = utf8.encode('dummy-campus-photo');
+      final description = await aiService.describeImage(
+        rawImageBytes,
+        prompt: 'Jelaskan fasilitas kampus dalam gambar ini',
+      );
+
+      expect(
+        description,
+        'Gambar menunjukkan suasana perpustakaan lantai 3 Polinema.',
+      );
+    });
   });
 }

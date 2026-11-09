@@ -282,6 +282,158 @@ class _ChatScreenState extends State<ChatScreen> {
     );
   }
 
+  Future<void> _showMultimodalSheet() async {
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (sheetContext) {
+        return SafeArea(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Fitur Multimodal AI',
+                  style: Theme.of(context).textTheme.titleMedium
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                ListTile(
+                  leading: const CircleAvatar(
+                    child: Icon(Icons.document_scanner_outlined),
+                  ),
+                  title: const Text('OCR Dokumen / KTM'),
+                  subtitle: const Text(
+                    'Ekstraksi teks dari gambar pengumuman atau kartu mahasiswa',
+                  ),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _runOcrDemo();
+                  },
+                ),
+                ListTile(
+                  leading: const CircleAvatar(child: Icon(Icons.mic_outlined)),
+                  title: const Text('Speech-to-Text (STT)'),
+                  subtitle: const Text(
+                    'Konversi suara/audio ke teks bahasa Indonesia',
+                  ),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _runSttDemo();
+                  },
+                ),
+                ListTile(
+                  leading: const CircleAvatar(
+                    child: Icon(Icons.image_search_outlined),
+                  ),
+                  title: const Text('Image Understanding'),
+                  subtitle: const Text(
+                    'Deskripsi dan analisis konteks gambar fasilitas/kampus',
+                  ),
+                  onTap: () {
+                    Navigator.of(sheetContext).pop();
+                    _runImageUnderstandingDemo();
+                  },
+                ),
+              ],
+            ),
+          ),
+        );
+      },
+    );
+  }
+
+  Future<void> _runOcrDemo() async {
+    setState(() => _isLoading = true);
+    try {
+      const mockKtmBytes =
+          'data:image/jpeg;base64,U2FtcGxlS1RNRG9jdW1lbnRUZXh0';
+      final result = await _aiService.recognizeText(mockKtmBytes);
+      _controller.text = result;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('OCR Berhasil: Teks disalin ke kolom input.'),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red.shade700,
+            content: Text('OCR Error: $e'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _runSttDemo() async {
+    setState(() => _isLoading = true);
+    try {
+      const mockAudioBytes =
+          'data:audio/mp3;base64,U2FtcGxlQXVkaW9TdHJlYW1EYXRh';
+      final text = await _aiService.speechToText(mockAudioBytes);
+      _controller.text = text;
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              'Speech-to-Text Berhasil: Transkrip disalin ke input.',
+            ),
+          ),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red.shade700,
+            content: Text('STT Error: $e'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
+  Future<void> _runImageUnderstandingDemo() async {
+    setState(() => _isLoading = true);
+    try {
+      const mockImageBytes =
+          'data:image/jpeg;base64,U2FtcGxlQ2FtcHVzSW1hZ2VEYXRh';
+      final description = await _aiService.describeImage(mockImageBytes);
+      if (mounted) {
+        setState(() {
+          _messages.add(
+            ChatMessage(
+              text: '[Image Understanding]: $description',
+              isUser: false,
+            ),
+          );
+        });
+        _scrollToBottom();
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            backgroundColor: Colors.red.shade700,
+            content: Text('Image Understanding Error: $e'),
+          ),
+        );
+      }
+    } finally {
+      if (mounted) setState(() => _isLoading = false);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -397,6 +549,11 @@ class _ChatScreenState extends State<ChatScreen> {
               padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
               child: Row(
                 children: [
+                  IconButton(
+                    icon: const Icon(Icons.add_photo_alternate_outlined),
+                    tooltip: 'Fitur Multimodal (OCR, STT, Vision)',
+                    onPressed: _isLoading ? null : _showMultimodalSheet,
+                  ),
                   Expanded(
                     child: TextField(
                       controller: _controller,

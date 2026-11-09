@@ -389,5 +389,60 @@ flutter test
 # Output: 22/22 tests passed! (100% lulus)
 ```
 
+---
+
+## 🏆 Tugas, Refleksi, dan Evaluasi (Mini Project)
+
+### 📌 Ringkasan Pemenuhan Industry Challenge
+
+| Butir Tugas | Status | Bukti & Lokasi Implementasi |
+| :--- | :---: | :--- |
+| **1. Integrasikan satu fitur AI ke project yang sudah ada** | ✅ **Selesai (4 Fitur)** | `campus_notify`: Chat Assistant Streaming, OCR KTM/Dokumen, Speech-to-Text, dan Image Understanding di [`lib/ai/ai_service.dart`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/10-Week-10-AI-Feature-Integration/Lib/campus_notify/lib/ai/ai_service.dart) & [`lib/features/chat_screen.dart`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/10-Week-10-AI-Feature-Integration/Lib/campus_notify/lib/features/chat_screen.dart). |
+| **2. Sertakan prompt sistem, user prompt, dan output awal AI** | ✅ **Selesai** | Terdokumentasi lengkap dan terstruktur pada file [`docs/ai-log.md`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/10-Week-10-AI-Feature-Integration/docs/ai-log.md). |
+| **3. Bukti mesin hijau: analyze + test** | ✅ **Selesai** | `flutter analyze` 0 warnings; `dart format` bersih; `flutter test` 22/22 tes lulus hijau. |
+| **4. Tabel risiko + mitigasi privasi dan biaya** | ✅ **Selesai** | Tabel risiko privasi (guardrail NIK/telepon) dan proteksi biaya (cache + rate limit) di Bab 5 README. |
+| **5. Struktur folder lengkap** | ✅ **Selesai** | Tersusun rapi pada `10-Week-10-AI-Feature-Integration/` berisi `Lib/`, `docs/`, `Screenshots/`, dan `README.md`. |
+
+---
+
+## 💭 Refleksi Pembelajaran
+
+### 1. Fitur AI mana yang Anda integrasikan dan mengapa?
+> **Jawaban:**  
+> Saya mengintegrasikan **AI Chat Assistant (Google Gemini REST API)** yang dilengkapi dengan **Token Streaming**, serta kapabilitas multimodal **OCR Dokumen/KTM**, **Speech-to-Text (STT)**, dan **Image Understanding**.  
+> **Alasan Teknis & Bisnis:**  
+> Pada aplikasi notifikasi dan informasi kampus (*Campus Notify*), mahasiswa membutuhkan akses cepat ke informasi jadwal akademik (KRS, jadwal ujian, yudisium) serta prosedur beasiswa tanpa harus mencari manual di lampiran PDF portal kampus. Fitur chat streaming menyajikan interaksi percakapan yang hidup dan responsif. Sementara itu, fitur OCR dan Speech-to-Text memberikan kemudahan input multimodal secara langsung dari foto kartu mahasiswa dan rekaman suara tanpa perlu mengetik panjang.
+
+### 2. Bagaimana Anda melindungi privasi pengguna saat menggunakan AI API?
+> **Jawaban:**  
+> Perlindungan privasi mahasiswa diwujudkan melalui tiga lapisan pertahanan (*multi-layer defense*):
+> 1. **Penyimpanan Kunci Terenkripsi:** API Key model AI tidak pernah di-hardcode ke repositori publik, melainkan disimpan secara aman di perangkat menggunakan `FlutterSecureStorage` (berbasis Android Keystore / iOS Keychain).
+> 2. **Client-Side Privacy Guardrails:** Menerapkan fungsi validasi regex lokal `_detectSensitiveData` pada [`lib/features/chat_screen.dart`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/10-Week-10-AI-Feature-Integration/Lib/campus_notify/lib/features/chat_screen.dart) yang secara otomatis memindai dan memblokir pengiriman NIK 16 digit (`\b\d{16}\b`) dan format nomor telepon sebelum prompt sempat diteruskan ke cloud AI provider.
+> 3. **Prinsip Minimisasi Data:** Sistem hanya mengirimkan konteks anonim tanpa mengikutsertakan kredensial akun ataupun profil pribadi mahasiswa.
+
+### 3. Fallback apa yang Anda sediakan jika layanan AI error?
+> **Jawaban:**  
+> Saya menerapkan mekanisme *Graceful Degradation* berlapis:
+> 1. **Dialog Interaktif Ramah Pengguna:** Saat terjadi kendala koneksi atau batas kuota API terlampaui, antarmuka tidak mengalami crash ataupun hang, melainkan menampilkan dialog *"Layanan AI Sibuk: Coba lagi nanti atau gunakan mode offline."*
+> 2. **In-Memory Caching:** Jawaban atas pertanyaan umum (seperti jadwal KRS) disimpan di cache lokal sehingga pengguna tetap mendapatkan respons instan tanpa memerlukan koneksi internet.
+> 3. **Offline Campus Knowledge Base:** Fungsi fallback lokal [`AiService.getFallbackResponse(question)`](file:///d:/Semester%205/Pemrograman%20Mobile/244107020090-Mobile-Course/10-Week-10-AI-Feature-Integration/Lib/campus_notify/lib/ai/ai_service.dart#L90-L103) yang memetakan kata kunci akademik (KRS, beasiswa, izin kuliah) ke data statis kampus yang valid dan terpercaya.
+
+### 4. Satu hal yang Anda pelajari tentang UX fitur AI di mobile?
+> **Jawaban:**  
+> Pelajaran paling berharga yang saya dapatkan adalah bahwa **persepsi kecepatan (perceived performance) pada aplikasi mobile AI ditentukan oleh streaming respons, bukan hanya latensi total**. Menunggu 3–5 detik untuk satu blok teks utuh terasa membosankan dan membingungkan pengguna mobile (seolah aplikasi macet). Namun dengan mengalirkan respons kata per kata (*typewriter streaming tokens*) disertai animasi indikator proses berpikir (*thinking state*), pengguna dapat langsung mulai membaca potongan informasi dalam waktu kurang dari satu detik. Kombinasi *quick suggestion chips* dan transparansi status model menjadikan pengalaman pengguna terasa mulus dan profesional.
+
+---
+
+## 📚 Referensi Pendukung
+
+* [Slide Week 10: Integrasi Fitur AI](https://docs.flutter.dev/)
+* [Google Gemini AI API Documentation](https://ai.google.dev/)
+* [Package `flutter_secure_storage`](https://pub.dev/packages/flutter_secure_storage)
+* [Package `http`](https://pub.dev/packages/http)
+* [Riverpod: Getting Started](https://riverpod.dev/)
+* [Learn Dart in Y Minutes](https://learnxinyminutes.com/docs/dart/)
+* [Dart Language Tour](https://dart.dev/guides/language/language-tour)
+
+
 
 

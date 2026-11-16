@@ -243,5 +243,360 @@ flutter test test/is_valid_task_title_test.dart
 00:00 +9: All tests passed! (100% Lulus)
 ```
 
+---
+
+## ⚡ 4. Menguji Kode Asinkron dan Dependensi (*Async & Dependency Testing*)
+
+Komponen logika bisnis pada aplikasi mobile hampir selalu berinteraksi dengan operasi asinkron (`Future`, `Stream`) dan sumber data eksternal (REST API, database lokal). Mengandalkan server backend nyata dalam pengujian otomatis adalah anti-pola (*anti-pattern*) karena menimbulkan ketergantungan jaringan, fluktuasi data, dan waktu eksekusi yang lambat.
+
+```mermaid
+flowchart LR
+    subgraph Lingkungan Pengujian Terkendali
+        Service["TaskService (Class yang Diuji)"] -->|Memanggil| Contract["TaskRepository (Interface)"]
+        Contract -->|Diimplementasikan oleh| Fake["FakeTaskRepository\n- Data statis terkendali\n- Simulasi exception\n- Simulasi delay"]
+    end
+    subgraph Dihindari saat Unit Testing
+        RealAPI["Real REST API Server\n(Fluktuatif, Butuh Internet, Lambat)"]
+    end
+```
+
+---
+
+### 1. Memisahkan Kontrak Sumber Data (*Separation of Data Contract*)
+
+Dengan menerapkan *Interface Segregation* dan *Dependency Inversion*, kita mendefinisikan kontrak kecil (`abstract interface class`) yang hanya memuat metode yang benar-benar dibutuhkan oleh fitur:
+
+```dart
+// lib/task_service.dart
+abstract interface class TaskRepository {
+  Future<List<String>> getTasks();
+}
+
+class TaskService {
+  final TaskRepository _repository;
+
+  TaskService(this._repository);
+
+  Future<List<String>> loadTasks() {
+    return _repository.getTasks();
+  }
+}
+```
+
+* **Keuntungan:** `TaskService` sama sekali tidak peduli apakah data diambil melalui Dio, HTTP, SQLite, atau memori RAM. Keterikatan (*coupling*) berhasil diputus.
+
+---
+
+### 2. Mengganti API Riil dengan *Fake Repository*
+
+*Fake* adalah objek pengganti tiruan dengan implementasi fungsional sederhana yang perilakunya dapat kita kendalikan sepenuhnya di dalam berkas pengujian:
+
+```dart
+class FakeTaskRepository implements TaskRepository {
+  final List<String> tasks;
+  final Exception? error;
+
+  FakeTaskRepository({this.tasks = const [], this.error});
+
+  @override
+  Future<List<String>> getTasks() async {
+    if (error != null) throw error!;
+    return tasks;
+  }
+}
+```
+
+#### Pengujian Kasus Sukses (*Happy Path*):
+```dart
+test('meneruskan data dari repository', () async {
+  final service = TaskService(
+    FakeTaskRepository(tasks: ['Baca materi']),
+  );
+
+  expect(await service.loadTasks(), ['Baca materi']);
+});
+```
+
+---
+
+### 3. Pengujian Transparansi Galat (*Error Transparency*)
+
+> [!WARNING]
+> **Penting:** Pastikan error jaringan atau database **tidak berubah diam-diam menjadi daftar kosong**.  
+> Jika repository mengalami kegagalan (misalnya `SocketException` atau HTTP 500) dan service secara diam-diam mengembalikan `[]`, UI akan menampilkan status *"Belum ada tugas"* alih-alih menampilkan banner error dan tombol *"Coba Lagi"*. Hal ini sangat menyesatkan pengguna.
+
+Pengujian kegagalan memverifikasi bahwa exception yang dilempar oleh repository diteruskan secara transparan ke lapisan atas:
+
+```dart
+test('melemparkan exception ketika repository mengalami error (tidak diam-diam jadi list kosong)', () async {
+  final expectedError = Exception('Koneksi database/jaringan terputus');
+  final fakeRepo = FakeTaskRepository(error: expectedError);
+  final service = TaskService(fakeRepo);
+
+  expect(
+    () async => await service.loadTasks(),
+    throwsA(isA<Exception>().having(
+      (e) => e.toString(),
+      'pesan error',
+      contains('Koneksi database/jaringan terputus'),
+    )),
+  );
+});
+```
+
+---
+
+### 4. Implementasi Pengujian Lengkap pada Proyek
+
+Berkas pengujian komprehensif disusun pada [`test/task_service_test.dart`](Lib/campus_notify/test/task_service_test.dart), mencakup:
+1. Pemuatan data sukses dari repository;
+2. Propagasi exception saat terjadi kegagalan data;
+3. Penanganan daftar kosong;
+4. Penyaringan data asinkron (*filtered tasks*);
+5. Pengujian latensi asinkron menggunakan simulasi penundaan `Future.delayed`.
+
+Pola yang sama telah terbukti konsisten digunakan di seluruh modul `campus_notify`:
+* `FakeTokenStore` & `FakeAuthRepo` pada [`test/login_usecase_test.dart`](Lib/campus_notify/test/login_usecase_test.dart);
+* `FakePaginatedAnnouncementRepository` pada [`test/paginated_announcements_test.dart`](Lib/campus_notify/test/paginated_announcements_test.dart);
+* `InMemoryCacheStorage` pada [`test/network_cache_test.dart`](Lib/campus_notify/test/network_cache_test.dart).
+
+---
+
+### 🧪 Bukti Verifikasi Mesin
+
+```bash
+flutter test test/task_service_test.dart
+```
+
+**Output Terminal:**
+```text
+00:00 +0: loading test/task_service_test.dart
+00:00 +0: TaskService & FakeTaskRepository (Pengujian Asinkron & Dependensi) meneruskan data dari repository (kasus sukses)
+00:00 +1: TaskService & FakeTaskRepository (Pengujian Asinkron & Dependensi) melemparkan exception ketika repository mengalami error (tidak diam-diam jadi list kosong)
+00:00 +2: TaskService & FakeTaskRepository (Pengujian Asinkron & Dependensi) mengembalikan daftar kosong ketika repository tidak memiliki tugas
+00:00 +3: TaskService & FakeTaskRepository (Pengujian Asinkron & Dependensi) menyaring tugas berdasarkan kata kunci pencarian (logika asinkron lanjutan)
+00:00 +4: TaskService & FakeTaskRepository (Pengujian Asinkron & Dependensi) menangani operasi asinkron dengan simulasi penundaan waktu (simulated latency)
+00:00 +5: All tests passed! (100% Lulus)
+```
+
+---
+
+## 🎨 5. Pengujian Widget (*Widget Testing & UI Interaction*)
+
+Pengujian widget (*Widget Testing*) memverifikasi bahwa antarmuka pengguna (UI) dibangun dengan benar, merespons interaksi gestur pengguna (ketikan teks, ketukan tombol, gulir layar), serta menampilkan status data dinamis secara akurat tanpa perlu menjalankan emulator fisik.
+
+```mermaid
+flowchart TD
+    subgraph Alur Pengujian Widget Flutter
+        Pump["1. tester.pumpWidget(MaterialApp(...))\n(Bangun Widget Tree ke Canvas Test)"] --> Find["2. find.byKey(...) / find.text(...)\n(Cari elemen target)"]
+        Find --> Interact["3. tester.enterText(...) & tester.tap(...)\n(Simulasikan aksi pengguna)"]
+        Interact --> Settle["4. tester.pumpAndSettle()\n(Tunggu rendering & animasi selesai)"]
+        Settle --> Assert["5. expect(find.text(...), findsOneWidget)\n(Verifikasi perubahan UI)"]
+    end
+```
+
+---
+
+### 1. Membangun Widget dan Memeriksa Hasilnya (`pumpWidget` & `find`)
+
+Pengujian widget berjalan menggunakan fungsi `testWidgets` yang menyediakan parameter `WidgetTester`. `tester.pumpWidget()` digunakan untuk merender struktur widget ke dalam *test environment*:
+
+```dart
+testWidgets('menampilkan judul halaman tugas', (tester) async {
+  await tester.pumpWidget(
+    const MaterialApp(
+      home: Scaffold(
+        body: Text('Daftar tugas'),
+      ),
+    ),
+  );
+
+  expect(find.text('Daftar tugas'), findsOneWidget);
+});
+```
+
+* **Pencari Elemen (*Finders*):**
+  * `find.text('...')`: Menemukan widget yang menampilkan teks tertentu;
+  * `find.byKey(const Key('...'))`: Menemukan widget berdasarkan pengenal unik (`Key`), sangat dianjurkan untuk formulir dan tombol agar pencarian tidak ambigu;
+  * `find.byType(WidgetType)`: Menemukan widget berdasarkan tipe kelasnya.
+* **Penegas (*Matchers*):**
+  * `findsOneWidget`: Tepat ditemukan 1 elemen;
+  * `findsNothing`: Elemen tidak ditemukan di layar;
+  * `findsNWidgets(n)`: Ditemukan sebanyak $n$ elemen.
+
+---
+
+### 2. Menguji Interaksi Pengguna & Input Formulir
+
+Pengujian interaksi mensimulasikan pengetikan teks dan penekanan tombol oleh pengguna:
+
+```dart
+// 1. Masukkan teks ke dalam TextField
+await tester.enterText(
+  find.byKey(const Key('task-title-field')),
+  'Baca materi',
+);
+
+// 2. Tekan tombol Simpan
+await tester.tap(find.byKey(const Key('save-task-button')));
+
+// 3. Pompa frame hingga seluruh animasi dan rebuild selesai
+await tester.pumpAndSettle();
+
+// 4. Verifikasi bahwa item baru muncul di daftar tugas
+expect(find.text('Baca materi'), findsOneWidget);
+```
+
+#### Mekanisme Pemompaan Waktu dan Frame:
+* `tester.pump()`: Memompa satu frame tunggal (berguna untuk memeriksa state sementara, misalnya indikator loading);
+* `tester.pumpAndSettle()`: Memompa frame secara berulang hingga tidak ada lagi frame animasi atau *microtask* yang tertunda;
+* `tester.pump(Duration duration)`: Memajukan jam waktu virtual pengujian sebesar durasi tertentu secara deterministik.
+
+> [!WARNING]
+> **Larangan `Future.delayed`:**  
+> Hindari menggunakan jeda waktu tetap seperti `await Future.delayed(...)` hanya agar pengujian lulus. Hal ini memicu *flaky tests* (pengujian yang kadang lulus kadang gagal tergantung kecepatan CPU komputer), memperlambat pipeline CI/CD, dan tidak sinkron dengan *animation scheduler* Flutter. Gunakan selalu `tester.pump()`, `tester.pump(Duration)`, atau `tester.pumpAndSettle()`.
+
+---
+
+### 3. Pengujian Berbagai Kondisi State pada Halaman
+
+Pada berkas implementasi antarmuka [`lib/task_page.dart`](Lib/campus_notify/lib/task_page.dart) dan pengujian [`test/task_widget_test.dart`](Lib/campus_notify/test/task_widget_test.dart), kami menguji seluruh kondisi antarmuka penting:
+
+1. **State Kosong (*Empty State*):** Menampilkan teks `'Belum ada tugas tersimpan'` saat pertama kali dibuka.
+2. **State Input Tidak Valid (*Validation Error*):** Ketika pengguna menekan tombol simpan dengan input kosong atau spasi saja, sistem menampilkan pesan error validasi `'Judul tugas tidak boleh kosong'`.
+3. **State Sukses (*Happy Path*):** Menambahkan tugas baru ke dalam `ListView`, mengosongkan kolom input, dan menghilangkan pesan error.
+4. **State Kontrol Waktu Deterministik:** Menambahkan beberapa tugas berturut-turut dengan memajukan jam virtual Flutter Test tanpa jeda waktu nyata.
+
+---
+
+### 🧪 Bukti Verifikasi Mesin
+
+```bash
+flutter test test/task_widget_test.dart
+```
+
+**Output Terminal:**
+```text
+00:00 +0: loading test/task_widget_test.dart
+00:00 +0: TaskPage Widget Tests (Pengujian Widget & Interaksi Pengguna) menampilkan judul halaman tugas
+00:00 +1: TaskPage Widget Tests (Pengujian Widget & Interaksi Pengguna) menampilkan antarmuka TaskPage lengkap dengan judul dan state awal
+00:00 +2: TaskPage Widget Tests (Pengujian Widget & Interaksi Pengguna) menguji interaksi pengguna menambah tugas ke daftar
+00:00 +3: TaskPage Widget Tests (Pengujian Widget & Interaksi Pengguna) menampilkan pesan validasi saat judul tugas kosong atau hanya spasi
+00:00 +4: TaskPage Widget Tests (Pengujian Widget & Interaksi Pengguna) mengelola pemompaan frame tanpa jeda waktu tetap Future.delayed
+00:00 +5: All tests passed! (100% Lulus)
+```
+
+---
+
+## 🔄 6. Pengujian Integrasi dan Regresi (*Integration & Regression Testing*)
+
+Setelah unit logika dan komponen widget terverifikasi secara mandiri, tahapan berikutnya adalah memastikan seluruh subsistem bekerja secara terpadu (*End-to-End*) serta menjamin tidak timbulnya *bug regresi* saat kode mengalami modifikasi.
+
+```mermaid
+flowchart LR
+    A["Modifikasi Kode / Fitur Baru"] --> B["Jalankan Regression Suite\n(flutter test)"]
+    B -->|Ada Bug Regresi?| C["Perbaiki Kode Sumber"]
+    C --> B
+    B -->|Semua Lulus| D["Deploy / Merge ke Branch Utama"]
+```
+
+---
+
+### 1. Menjalankan Alur pada Perangkat (*Integration Test*)
+
+Pengujian integrasi memverifikasi alur penuh interaksi pengguna pada target emulator atau perangkat fisik riil.
+
+#### Konfigurasi Dependensi (`pubspec.yaml`):
+```yaml
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  integration_test:
+    sdk: flutter
+```
+
+#### Struktur Berkas Pengujian (`integration_test/app_test.dart`):
+Pengujian integrasi ditempatkan di direktori khusus [`integration_test/app_test.dart`](Lib/campus_notify/integration_test/app_test.dart) dan menggunakan binding `IntegrationTestWidgetsFlutterBinding.ensureInitialized()`:
+
+```dart
+import 'package:flutter/material.dart';
+import 'package:flutter_test/flutter_test.dart';
+import 'package:integration_test/integration_test.dart';
+import 'package:campus_notify/task_page.dart';
+
+void main() {
+  IntegrationTestWidgetsFlutterBinding.ensureInitialized();
+
+  testWidgets('pengguna dapat menambahkan tugas dan memverifikasi di daftar', (tester) async {
+    await tester.pumpWidget(
+      const MaterialApp(
+        home: TaskPage(),
+      ),
+    );
+    await tester.pumpAndSettle();
+
+    // 1. Masukkan teks tugas
+    await tester.enterText(
+      find.byKey(const Key('task-title-field')),
+      'Baca materi',
+    );
+
+    // 2. Ketuk tombol simpan tugas
+    await tester.tap(find.byKey(const Key('save-task-button')));
+    await tester.pumpAndSettle();
+
+    // 3. Verifikasi item muncul di antarmuka
+    expect(find.text('Baca materi'), findsOneWidget);
+  });
+}
+```
+
+#### Perintah Eksekusi pada Perangkat / Emulator:
+```bash
+flutter test integration_test/app_test.dart -d <device_id>
+# Contoh pada emulator Android:
+flutter test integration_test/app_test.dart -d emulator-5554
+```
+
+---
+
+### 2. Mencegah Regresi dengan Pengujian Ulang (*Regression Testing*)
+
+Bug regresi (*regression bug*) adalah cacat fungsi lama yang sebelumnya berjalan normal, namun tiba-tiba rusak akibat perubahan atau refactor pada bagian kode lain.
+
+#### Metodologi Pencegahan Regresi:
+1. **Reproduksi Masalah:** Saat bug ditemukan, tuliskan satu kasus uji khusus yang mereproduksi kegagalan tersebut (pengujian harus berwarna merah/gagal terlebih dahulu).
+2. **Perbaikan Sumber Masalah:** Lakukan refactoring atau patch pada kode sumber hingga pengujian berwarna hijau/lulus.
+3. **Penyimpanan Permanen:** Simpan berkas uji ke dalam *Regression Suite* agar setiap kali tim developer menjalankan perintah `flutter test`, skenario tersebut selalu divalidasi kembali.
+
+#### Berkas Regression Test Suite pada Proyek:
+Disusun berkas khusus [`test/regression_test.dart`](Lib/campus_notify/test/regression_test.dart) yang mengunci 4 skenario regresi kritis:
+
+1. **Regresi #1 (Validasi Form):** Menolak input judul yang hanya terdiri dari whitespace tak kasat mata (tab `\t`, newline `\n`, carriage return `\r`).
+2. **Regresi #2 (Transparansi Galat Jaringan):** Menjamin kegagalan backend tidak ditelan diam-diam menjadi daftar kosong, sehingga UI tidak salah menampilkan status data kosong.
+3. **Regresi #3 (Resiliensi Offline Caching):** Menjamin repository lokal menyajikan data cache secara instan saat koneksi terputus tanpa memicu crash fatal.
+4. **Regresi #4 (Anti-Duplikasi Paginasi):** Memastikan penarikan data halaman berurutan (halaman 1 dan 2) menghasilkan himpunan ID yang saling lepas (*disjoint sets*), mencegah duplikasi entri di layar.
+
+---
+
+### 🧪 Bukti Verifikasi Mesin
+
+```bash
+flutter test test/regression_test.dart
+```
+
+**Output Terminal:**
+```text
+00:00 +0: loading test/regression_test.dart
+00:00 +0: Regression Test Suite (Pencegahan Bug Berulang) Regresi #1: Validasi form tugas menolak input yang hanya terdiri dari whitespace tak kasat mata
+00:00 +1: Regression Test Suite (Pencegahan Bug Berulang) Regresi #2: Error jaringan pada TaskService tidak boleh berubah diam-diam menjadi list kosong
+00:00 +2: Regression Test Suite (Pencegahan Bug Berulang) Regresi #3: Repository cache menyajikan data lokal saat offline tanpa error fatal
+00:00 +3: Regression Test Suite (Pencegahan Bug Berulang) Regresi #4: Paginasi tidak boleh menghasilkan daftar yang tumpang tindih saat dipanggil berurutan
+00:00 +4: All tests passed! (100% Lulus)
+```
+
+
+
+
 
 

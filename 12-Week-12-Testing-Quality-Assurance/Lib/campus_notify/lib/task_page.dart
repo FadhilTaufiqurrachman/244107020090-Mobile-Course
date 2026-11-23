@@ -89,3 +89,12 @@ class _TaskPageState extends State<TaskPage> {
     );
   }
 }
+
+void main() {
+  runApp(
+    const MaterialApp(
+      debugShowCheckedModeBanner: false,
+      home: TaskPage(),
+    ),
+  );
+}

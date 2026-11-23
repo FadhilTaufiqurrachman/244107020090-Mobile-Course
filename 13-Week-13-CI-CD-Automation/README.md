@@ -158,7 +158,7 @@ name: Flutter CI
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main, develop, 'feat/**']
   pull_request:
     branches: [main, develop]
   workflow_dispatch:

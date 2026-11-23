@@ -206,10 +206,10 @@ jobs:
         run: flutter test --coverage
 
       - name: Build Android APK
-        run: flutter build apk --release
+        run: flutter build apk --release --android-skip-build-dependency-validation
 
       - name: Build Android App Bundle (AAB)
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --android-skip-build-dependency-validation
 
       - name: Upload Android Build Artifacts
         uses: actions/upload-artifact@v4
@@ -274,10 +274,10 @@ Proses kompilasi biner dijalankan secara berurutan hanya jika seluruh tahapan fo
 
 ```yaml
       - name: Build Android APK
-        run: flutter build apk --release
+        run: flutter build apk --release --android-skip-build-dependency-validation
 
       - name: Build Android App Bundle (AAB)
-        run: flutter build appbundle --release
+        run: flutter build appbundle --release --android-skip-build-dependency-validation
 ```
 
 * Perintah `flutter build apk --release` menghasilkan biner mandiri pada:  
